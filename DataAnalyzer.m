@@ -465,7 +465,7 @@ function showimg(filenum)
     framenum=get(framelist, 'Value');
     hdwmodesel=get(hdwmode, 'SelectedObject');
     imgmode=hdwmodesel.Value;
-    imgid=cell2mat(filenum);
+    imgid=cell2mat(filenum(1));
     sqlquery2=['SELECT data, cameraID_fk FROM images WHERE imageID = ', num2str(imgid)];
     curs2=exec(conn, sqlquery2);
     curs2=fetch(curs2);
