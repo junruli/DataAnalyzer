@@ -57,6 +57,8 @@ f = figure('Name', 'Data Analysis Software','Visible','on','Position',[50,50,160
 
 [zoom_icon,pan_icon,curs_icon,rotate_icon]=icon_update();
 
+% "Global" Variables
+numImages = 500; % the number of images viewable in the data analyzer
 
 col=1024;
 row=1024;
@@ -241,7 +243,7 @@ f.ToolBar = 'None'; %Hide the main toobar in GUI
 f.MenuBar = 'None'; % Hide menu bar in GUI
 zoom_img=zoom(img);
 zoom_img.Enable = 'off';
-dbh=NET.Assembly('DatabaseHelper.dll');
+% dbh=NET.Assembly('DatabaseHelper.dll');
 count=1;
 updatefittypelist();
 updatefitlist();
@@ -293,13 +295,13 @@ end
 %% Updating global imgidlist which is displayed in dblist
 function updateimgidlist()
     m=max(cell2mat(imgidlist));
-    sqlquery='SELECT imageID FROM images ORDER BY imageID DESC LIMIT 100';
+    sqlquery=['SELECT imageID FROM images ORDER BY imageID DESC LIMIT ' num2str(numImages)];
     curs1=exec(conn, sqlquery);
     curs1=fetch(curs1);
     newimgidlist = curs1.Data;
-    %If size is more than 20 then replace 20th with 1st in imgidlist
+    %If size is more than numImages then replace last with 1st in imgidlist
     length_imgidlist=length(imgidlist);
-    if length_imgidlist > 100
+    if length_imgidlist > numImages
         for i=1:length(newimgidlist)
             imgidlist{i}=newimgidlist{i};
         end
@@ -352,6 +354,13 @@ function updatedblist()
     curs1=fetch(curs1);
     db = curs1.Data;
     close(curs1);
+    if ~isempty(anaimgidlist)
+        for i = 1:length(db)
+            if any(cell2mat(imgidlist(i))==cell2mat(anaimgidlist))
+                db(i) = strcat('*',db(i));
+            end
+        end
+    end
     set(dblist, 'string', db);
 end
 
@@ -463,7 +472,7 @@ function showimg(filenum)
     framenum=get(framelist, 'Value');
     hdwmodesel=get(hdwmode, 'SelectedObject');
     imgmode=hdwmodesel.Value;
-    imgid=cell2mat(filenum);
+    imgid=cell2mat(filenum(1));
     sqlquery2=['SELECT data, cameraID_fk FROM images WHERE imageID = ', num2str(imgid)];
     curs2=exec(conn, sqlquery2);
     curs2=fetch(curs2);
@@ -482,7 +491,7 @@ function showimg(filenum)
     r=data_det(a,imgmode, framenum);
 %    axes(img);
     cla(img);
-    imagedata= imagesc(r, 'Parent', img);
+    [~]= imagesc(r, 'Parent', img);
 %    set(img, 'CData', r);
 %    [col, row] = size(r);
 %    axis(img, [1 col 1 row]);
@@ -494,10 +503,10 @@ function showimg(filenum)
     end
     if framenum == 1
         caxis(img, [0 1.2]);
-        cbh = colorbar(img,'XTickLabel',{'0' '1.20'}, 'XTick', [0 1.2]);
+        [~] = colorbar(img,'XTickLabel',{'0' '1.20'}, 'XTick', [0 1.2]);
     else
         caxis(img, [min(r(:)) max(r(:))]);
-        cbh = colorbar(img,'XTickLabel',{num2str(min(r(:))) num2str(max(r(:)))},'XTick', [min(r(:)) max(r(:))]);
+        [~] = colorbar(img,'XTickLabel',{num2str(min(r(:))) num2str(max(r(:)))},'XTick', [min(r(:)) max(r(:))]);
     end    
     curs_update();
 end
@@ -560,7 +569,7 @@ function [r] = data_det(a, imgmode, framenum)
     end
     button_state = get(rotatebtn,'Value');
     if button_state == get(rotatebtn,'Max')
-        r=imrotate(r, str2num(rotangle), 'bilinear', 'loose');          %Imrotate type and crop property can be defined here
+        r=imrotate(r, str2double(rotangle), 'bilinear', 'loose');          %Imrotate type and crop property can be defined here
     end
 end
 
@@ -569,12 +578,12 @@ function load_click(~, ~)
     newid=inputdlg('Enter Image ID:', 'Load');
     a=cell2mat(newid);
     l=length(imgidlist);
-    imgidlist(l+1)=num2cell(str2num(a));
+    imgidlist(l+1)=num2cell(int32(str2double(a)));
     updatedblist();
 end
 
 %% Call back function for save button for dblist. Change type from temp to perm
-function save_click(source, eventdata)
+function save_click(~, ~)
     sel=get(dblist, 'Value');
     id= imgidlist(sel);
     sqlquery2=['UPDATE images SET type = ''perm'' WHERE imageID IN (', strjoin(cellstr(num2str(cell2mat(id))),','),')'];
@@ -584,7 +593,7 @@ function save_click(source, eventdata)
 end    
 
 %% Call back function for delete button for dblist
-function del_click(source, eventdata)
+function del_click(~, ~)
     sel=get(dblist, 'Value');
     id= imgidlist(sel);
     sqlquery2 = ['DELETE FROM images WHERE imageID IN (', strjoin(cellstr(num2str(cell2mat(id))),','),')'];
@@ -598,7 +607,7 @@ function del_click(source, eventdata)
 end    
 
 %% Function for renaming image in dblist
-function rename_imgname(source, eventdata)
+function rename_imgname(~, ~)
     sel=get(dblist,'Value');
     newname=get(imgname,'String');
     id= cell2mat(imgidlist(sel));
@@ -611,7 +620,7 @@ function rename_imgname(source, eventdata)
 end
 
 %% Call back function for add 2 analysis button for dblist. 
-function add2ana_click(source, eventdata)
+function add2ana_click(~, ~)
     sel=get(dblist,'Value');
     anaimgidlist=[anaimgidlist; imgidlist(sel)];
     updateanalysisdblist();
@@ -634,7 +643,7 @@ function analist_keypress(source, eventdata)
 end
 
 %% Call back function for load button for analysisdblist
-function load2ana_click(source, eventdata)
+function load2ana_click(~, ~)
     newid=inputdlg('Enter Sequence ID:', 'Load images for analysis');
     a=cell2mat(newid);
     sqlquery2=['SELECT imageID FROM images WHERE sequenceID_fk = ', a];
@@ -647,21 +656,21 @@ function load2ana_click(source, eventdata)
 end
 
 %% Call back function for delete from analysisdblist. 
-function del2ana_click(source, eventdata)
+function del2ana_click(~, ~)
     selected = get(analysisdblist,'Value');
-    list = get(analysisdblist, 'String');
+%     list = get(analysisdblist, 'String');
     anaimgidlist(selected)=[];
     updateanalysisdblist();
 end
 
 %% Call back function for clearing all images from analysisdblist. 
-function clear2ana_click(source, eventdata)
+function clear2ana_click(~, ~)
     anaimgidlist = [];
     updateanalysisdblist();
 end
 
 %% Zoom button (currently handles all zoom requirements)
-function zoom_on (source,eventdata)
+function zoom_on (~,~)
     button_state = get(zon,'Value');
     if button_state == get(zon,'Max')
         zoom_img.Enable = 'on';
@@ -671,13 +680,13 @@ function zoom_on (source,eventdata)
 end
 
 %Zoom reset to 100%
-function zoom_reset(source, ~)
+function zoom_reset(~, ~)
     axis(img, [1 col 1 row]);
     set(zreset, 'Value', 0);
 end
 
 %% Turn pan on for the img axes
-function pan_on(source, eventdata)
+function pan_on(~, ~)
     button_state = get(panbtn,'Value');
     if button_state == get(panbtn,'Max')
         pan(img,'On');
@@ -687,19 +696,19 @@ function pan_on(source, eventdata)
 end
 
 %% Rotate for img axes, we just do showimg() with rotation
-function rotate_on(source, eventdata)
+function rotate_on(~, ~)
     showimg(currentimgid);
 end
 
 %% Callback function to enter new angle of rotation for img axes
-function enter_rotangle(source, eventdata)
+function enter_rotangle(~, ~)
     rotangle=get(rotangleinput,'String');
     showimg(currentimgid);
 end
 
 
 %% Cursor button call back function 
-function curs_on (source, eventdata) 
+function curs_on (~, ~) 
     button_state = get(curs,'Value');
     if button_state == get(curs,'Max')
         [xcurs,ycurs] = ginputax(img,2);    
@@ -726,7 +735,7 @@ function curs_update()
         draggable(yl2,'constraint','vertical', 'endfcn', @yl2_change);
 end
 
-function xl1_change(source, eventdata)
+function xl1_change(~, ~)
     x1=get(xl1, 'XData');
     x3=get(xl2, 'XData');
     if x3(1) == xcurs(1)
@@ -736,7 +745,7 @@ function xl1_change(source, eventdata)
     end
 end
     
-function xl2_change(source, eventdata)
+function xl2_change(~, ~)
     x1=get(xl1, 'XData');
     x3=get(xl2, 'XData');
     if x1(1) == xcurs(1)
@@ -746,7 +755,7 @@ function xl2_change(source, eventdata)
     end
 end
 
-function yl1_change(source, eventdata)
+function yl1_change(~, ~)
     y1=get(yl1, 'YData');
     y3=get(yl2, 'YData');
     if y3(1) == ycurs(1)
@@ -756,7 +765,7 @@ function yl1_change(source, eventdata)
     end
 end
 
-function yl2_change(source, eventdata)
+function yl2_change(~, ~)
     y1=get(yl1, 'YData');
     y3=get(yl2, 'YData');
     if y1(1) == ycurs(1)
@@ -768,7 +777,7 @@ end
 
 
 %% Callback function for update button for quick results
-function update_but(source, eventdata)
+function update_but(~, ~)
     framenum=get(framelist, 'Value');
     hdwmodesel=get(hdwmode, 'SelectedObject');
     imgmode=hdwmodesel.Value;
@@ -848,7 +857,7 @@ function [n] = norm_n_count(a)
 end
 
 %% Callback function for fit button to plot results in fitplt
-function fit_click(source, eventdata)
+function fit_click(~, ~)
     fitnum=get(fitlist,'Value');
     currentfolder = pwd;
     fitpath=[currentfolder '\FittingFunctions'];
@@ -910,7 +919,7 @@ function fit_click(source, eventdata)
     resx=xvardet(length(anaimgidlist));    %Determines value/array of x variable for fit plot
     % Fittype inclusion
     fittyp=getfittype();
-    output_num=str2num(get(fitoutputnum, 'String'));
+    output_num=int32(str2double(get(fitoutputnum, 'String')));
     if strcmp(fittyp,'') == 1
         axes(fitplt);
         resulty=resy(:,output_num)';
@@ -931,6 +940,8 @@ function fit_click(source, eventdata)
         theta0=0.2;
         theta=fminsearch(ls, theta0);
         volts_5recoil=(0.0000125*1000*2*pi*5*2.02781)/(2*theta);
+        resultx = zeros(1,length(anaimgidlist));
+        resulty = zeros(1,length(anaimgidlist));
         for i=1:length(anaimgidlist)
             resulty(i)=besselj(0,theta*resx(i));
             resultx(i)=theta*resx(i);
@@ -971,7 +982,7 @@ function fit_click(source, eventdata)
 end
 
 %% Callback function for fit button to plot results in fitplt
-function singlefit_click(source, eventdata)
+function singlefit_click(~, ~)
     fitnum=get(fitlist,'Value');
     currentfolder = pwd;
     fitpath=[currentfolder '\FittingFunctions'];
@@ -985,7 +996,7 @@ function singlefit_click(source, eventdata)
     imgmode=hdwmodesel.Value;
     eachplot = 1;
     val= get(analysisdblist,'Value');
-    ids= get(analysisdblist,'String');
+    [~]= get(analysisdblist,'String');
     imgid=cell2mat(anaimgidlist(val));
     sqlquery2=['SELECT data,cameraID_fk FROM images WHERE imageID = ', num2str(imgid)];
     curs2=exec(conn, sqlquery2);
@@ -1009,7 +1020,7 @@ function singlefit_click(source, eventdata)
     p=framedata(miny:maxy,minx:maxx);           %Swapped x & y due to matlab notation
     resy=fitfunc(p, eachplot);
     
-    output_num=str2num(get(fitoutputnum, 'String'));
+    output_num=int32(str2double(get(fitoutputnum, 'String')));
     resulty=resy(:,output_num)';
 
     resx=xvardet(1);    %Determines value/array of x variable for fit plot
@@ -1033,8 +1044,8 @@ function resx = xvardet(n)
             filenames=get(analysisdblist, 'String');
             name=filenames{i};
             splitfilename=strsplit(name);
-            b=cellfun(@str2num,splitfilename(:),'un',0).';
-            v=str2num(xvar);
+            b=cellfun(@str2double,splitfilename(:),'un',0).';
+            v=int32(str2double(xvar));
             na=cell2mat(b(v));
             resx(i)=na;
         end
@@ -1054,7 +1065,7 @@ function resx = xvardet(n)
             sqlquery3=['SELECT ',var,' FROM ciceroout WHERE runID = ', num2str(runID)];
             curs3=exec(conn, sqlquery3);
             curs3=fetch(curs3);
-            a=curs3.Data;
+%             a=curs3.Data;
             resx(i)=cell2mat(curs3.Data);
             close(curs3);
         end
@@ -1062,8 +1073,8 @@ function resx = xvardet(n)
 end
 
 %% Opens cftool with data from results
-function cftool_click(source, eventdata)
-    output_num=str2num(get(fitoutputnum, 'String'));
+function cftool_click(~, ~)
+    output_num=int32(str2double(get(fitoutputnum, 'String')));
     total_y=getappdata(f,'resulty');
     x=getappdata(f,'resultx');
     y=total_y(:, output_num);
@@ -1072,7 +1083,7 @@ end
 
 
 %% Callback function to enter position of x variable in name
-function enter_fitxvar(source, eventdata)
+function enter_fitxvar(~, ~)
     xvar=get(fitxvar,'String');
 end
 
@@ -1111,7 +1122,7 @@ function [type] = getfittype()
 end
 
 %% Delete all imageID marked as Temp (should be done every few days)
-function deltemp_click(source, eventdata)
+function deltemp_click(~, ~)
     choice=questdlg('Are you sure you want to delete temporary images?', 'ATTENTION', 'Yes!', 'No', 'No');
     switch choice
         case 'Yes'
@@ -1122,21 +1133,21 @@ function deltemp_click(source, eventdata)
 end
 
 %% Close all figures except GUI
-function closefig_click(source, eventdata)
+function closefig_click(~, ~)
     figs = get(0,'children');
     figs(figs == gcf) = []; % delete your current figure from the list
     close(figs)    
 end
 
 %% Show selected image in analysisdblist on img axes
-function showanalysisimgid_click(source, eventdata)
+function showanalysisimgid_click(~, ~)
     val= get(analysisdblist,'Value');
     imgid=anaimgidlist(val);
     showimg(imgid);
 end
 
 %% Clears data saved from last fit (required when fit after changing cursor or angle)
-function clearlastfit_click(source, eventdata)
+function clearlastfit_click(~, ~)
     setappdata(f, 'ids', []);
 end
 
