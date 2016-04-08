@@ -354,6 +354,13 @@ function updatedblist()
     curs1=fetch(curs1);
     db = curs1.Data;
     close(curs1);
+    if ~isempty(anaimgidlist)
+        for i = 1:length(db)
+            if any(cell2mat(imgidlist(i))==cell2mat(anaimgidlist))
+                db(i) = strcat('*',db(i));
+            end
+        end
+    end
     set(dblist, 'string', db);
 end
 
