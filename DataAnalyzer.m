@@ -1000,6 +1000,9 @@ function resx = xvardet(n)
             b=cellfun(@str2double,splitfilename(:),'un',0).';
             v=int32(str2double(xvar));
             na=cell2mat(b(v));
+            if isnan(na)
+                na = 0;
+            end
             resx(i)=na;
         end
     elseif xvarmodevalue == '3'

@@ -10,40 +10,23 @@ function [r] = data_evaluation(a, imgmode, framenum)
     end
     [m,n]=size(a_1);
 % To determine and correct value of pixels
-    for i=1:m
-        for j=1:n
-            if a_1(i,j) > 65535
-                a_1(i,j)=65535;
-            elseif a_1(i,j) < a_3(i,j)
-                a_1(i,j)= a_3(i,j);
-            end
-        end
-    end
+    a_1 = min(a_1,65535);
+    a_2 = min(a_2,65535);
+    a_3 = min(a_3,65535);
     a_up=a_1-a_3;
     a_down=a_2-a_3;
-    for i=1:m
-        for j=1:n
-            if a_down(i,j) > 65535
-                a_down(i,j)=65535;
-            elseif a_down(i,j) < 1
-                a_down(i,j) = 1;
-            end
-        end
-    end
+    
+    a_up = min(a_up,65535);
+    a_down = min(a_down,65535);
+    a_down = max(a_down, 1);
+
     a_up=double(a_up);
     a_down=double(a_down);
     switch framenum
         case 1
             r=a_up./a_down;
-            for i=1:m
-                for j=1:n
-                    if r(i,j) > 2
-                        r(i,j)=2;
-                    elseif r(i,j) < 0.01
-                        r(i,j) = 0.01;
-                    end
-                end
-            end
+            r = max(r,0.01);
+            r = min(r,2); % Why is this one here?
         case 2
             r=a_1;
         case 3
