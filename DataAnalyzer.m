@@ -941,20 +941,26 @@ function fit_click(~, ~)
         theta=fminsearch(ls, theta0);
         volts_5recoil=(0.0000125*1000*2*pi*5*2.02781)/(2*theta);
         resultx = zeros(1,length(anaimgidlist));
-        resulty = zeros(1,length(anaimgidlist));
+        resulty0 = zeros(1,length(anaimgidlist));
+        resulty1 = zeros(1,length(anaimgidlist));
+        resulty2 = zeros(1,length(anaimgidlist));
         for i=1:length(anaimgidlist)
-            resulty(i)=besselj(0,theta*resx(i));
+            resulty0(i)=resy(i,1);
+            resulty1(i)=resy(i,2);
+            resulty2(i)=resy(i,3);
             resultx(i)=theta*resx(i);
         end
         showdata1='';
-        for i=1:length(resulty)
-            showdata1{i}=sprintf('%s , %s', num2str(resx(i)), num2str(resulty(i)));
+        for i=1:length(resulty0)
+            showdata1{i}=sprintf('%s , %s', num2str(resx(i)), num2str(resulty0(i)));
         end
         showdata=sprintf('\n%s', showdata1{:});
         axes(fitplt);
-        scatter(resultx,resulty);
+        plot(resultx,resulty0,'bo',resultx,resulty1,'ro',resultx,resulty2,'go');
         hold on
-        fplot(@(x) besselj(0,x), [min(resultx) max(resultx)]);
+        fplot(@(x) besselj(0,x)^2, [min(resultx) max(resultx)],'b');
+        fplot(@(x) besselj(1,x)^2, [min(resultx) max(resultx)],'r');
+        fplot(@(x) besselj(2,x)^2, [min(resultx) max(resultx)],'g');
         hold off
         set(fitres,'String',{'Results:';['Theta: ' num2str(theta)];['Volts/5 Erec: ' num2str(volts_5recoil)];['Bessel 0 Data: ' showdata]});
     else
