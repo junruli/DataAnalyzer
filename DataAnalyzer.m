@@ -750,9 +750,12 @@ function update_but(~, ~)
     miny=round(min(ycurs));
     maxy=round(max(ycurs));
     data_roi=data(miny:maxy,minx:maxx);     %Change in x & y due to MATLAB notation, plot x in horizontal and y in transverse
-    ncount=n_count(data_roi);
-    norm_n=norm_n_count(data_roi);  %Not data_roi as input because need to take boundary in account
-%For gaussian fitting
+   
+    currentfolder = pwd;
+    fitpath=[currentfolder '\FittingFunctions'];
+    addpath(fitpath);
+    norm_n = NormN_Count(data_roi,0);
+    
     data_roi=-log(data_roi);
     r1=sum(data_roi);
     x=1:length(r1);
@@ -776,31 +779,6 @@ function update_but(~, ~)
     y_center=fit_y(2)+miny;
     y_width=fit_y(3)*2^(3/2);
     set(quickres, 'String', {['N Count: ' num2str(ncount)]; ['Norm N Count: ' num2str(norm_n)]; ['X Width: ' num2str(x_width)]; ['Y Width: ' num2str(y_width)]; ['X Center: ' num2str(x_center)]; ['Y Center: ' num2str(y_center)]; ['X Curs: ' num2str(round(min(xcurs))) ' , ' num2str(round(max(xcurs)))];['Y Curs: ' num2str(round(min(ycurs))) ' , ' num2str(round(max(ycurs)))];});
-end
-
-%% Function to calculate N Count for Quick Results, called from update_but
-function [n] = n_count(p)
-    u=-log(p);
-    l=sum(u(:));
-    v=real(l);
-    n=round(v);
-end
-
-
-%% Function to calculate Norm N Count for Quick Results, called from update_but
-function [n] = norm_n_count(a)
-    q1=a(1,:);
-    q2=a(end,:);
-    q3=a(:,1);
-    q4=a(:,end);
-    m=[q1(:);q2(:);q3(:);q4(:)];
-    s=mean(m);
-    u2=-log(a);
-    s2=-log(s);
-    u=u2-s2;
-    l=sum(u(:));
-    v=real(l);
-    n=round(v);
 end
 
 %% Callback function for fit button to plot results in fitplt
