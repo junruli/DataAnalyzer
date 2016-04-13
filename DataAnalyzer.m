@@ -94,8 +94,10 @@ curs = uicontrol('Style','togglebutton','CData',curs_icon,'Position',[820,650,25
 panbtn = uicontrol('Style','togglebutton','CData', pan_icon, 'Position',[935,650,25,25], 'Callback', @pan_on); %Turn on pan for Img axes
 rotatebtn = uicontrol('Style','togglebutton','CData', rotate_icon, 'Position',[820,610,25,25],'Callback', @rotate_on); %Rotate for Img axes
 rotangleinput = uicontrol('Style','edit','String',rotangle,'Position',[855,610,25,25],'Callback', @enter_rotangle); %Angle to rotate image by
-colormapname = uicontrol('Style','popupmenu','String',{'Color';'B&W'},'Position',[890,610,70,25], 'Callback', @colormapname_click); %Color map for img axes
+colormapname = uicontrol('Style','popupmenu','String',{'Color';'B&W'},'Position',[910,610,50,25], 'Callback', @colormapname_click); %Color map for img axes
 
+rotincrement = uicontrol('Style','pushbutton','String','+','Position',[880,623,25,12],'Callback',@rotinc_click);
+rotdecrement = uicontrol('Style','pushbutton','String','-','Position',[880,610,25,12],'Callback',@rotdec_click);
 
 dblist = uicontrol('Style','listbox', 'min' , 0, 'max' , 400, 'Position', [50, 20, 350,280], 'Value', [], 'Callback', @dblist_click, 'KeyPressFcn', @dblist_keypress); %List from database
 
@@ -137,6 +139,8 @@ showanalysisimgidbut = uicontrol('Style','pushbutton','String','Show','Position'
 fitoutputnum_text = uicontrol('Style','text','String','Output # :','Position',[1210,295,60,25]);
 fitoutputnum = uicontrol('Style','edit','String','1','Position',[1270,300,50,25]); %Number of output variable for fitting
 
+yvarincrement = uicontrol('Style','pushbutton','String','+','Position',[1320,313,25,12],'Callback',@yvarinc_click);
+yvardecrement = uicontrol('Style','pushbutton','String','-','Position',[1320,300,25,12],'Callback',@yvardec_click);
 
 % X Variable for fit
 xvariable_text = uicontrol('Style','text','String','X Variable:','Position',[1290,220,70,25]);
@@ -146,6 +150,9 @@ xvarnamemode = uicontrol('Parent', xvarmode, 'Style','radiobutton','String','Nam
 fitxvar = uicontrol('Style','edit','String',xvar,'Position',[1450,145,50,25], 'Callback', @enter_fitxvar); %X Variable for fitting function
 xvardbmode = uicontrol('Parent', xvarmode, 'Style','radiobutton','String','DB Variable','Units', 'pixels','Position',[10,10,120,25], 'Tag', '3'); %Choose x variable for fitplt from db tables
 xvardropmenu = uicontrol('Style','popupmenu','Position',[1450,110,100,25]); %X Variable from database
+
+xvarincrement = uicontrol('Style','pushbutton','String','+','Position',[1500,158,25,12],'Callback',@xvarinc_click);
+xvardecrement = uicontrol('Style','pushbutton','String','-','Position',[1500,145,25,12],'Callback',@xvardec_click);
 
 % Y variable for fit
 yvariable_text = uicontrol('Style','text','String','Y Variable:','Position',[1050,230,70,25]);
@@ -165,7 +172,6 @@ nextnamecheck = uicontrol('Style','checkbox','String','Specify next name','Posit
 deltempbut = uicontrol('Style','pushbutton','String','Delete Temp Data','Position',[870,90,120,30], 'Callback', @deltemp_click); %Delete temporary data in database
 closefigsbut = uicontrol('Style','pushbutton','String','Close sub figures','Position',[870,20,120,25], 'Callback', @closefig_click); %Close all figures except GUI
 clearlastfitbut= uicontrol('Style','pushbutton','String','Clear last fit data','Position',[870,55,120,25], 'Callback', @clearlastfit_click); %Clears last fit data (to be used in case of change of cursor or angle)
-
 
 
 %% Normalize the components
@@ -236,6 +242,12 @@ fitoutputnum_text.Units = 'normalized';
 fitoutputnum.Units = 'normalized';
 nextnamecheck.Units = 'normalized';
 clearlastfitbut.Units = 'normalized';
+xvarincrement.Units = 'normalized';
+xvardecrement.Units = 'normalized';
+yvarincrement.Units = 'normalized';
+yvardecrement.Units = 'normalized';
+rotincrement.Units = 'normalized';
+rotdecrement.Units = 'normalized';
 
 
 %% Initialize the UI
@@ -657,6 +669,22 @@ function enter_rotangle(~, ~)
     showimg(currentimgid);
 end
 
+%% Callback function to increment rotangle
+function rotinc_click(~,~)
+    temp = get(rotangleinput,'String');
+    rotangle = num2str(str2double(temp) + 1);
+    set(rotangleinput,'String',rotangle);
+    showimg(currentimgid);
+end
+
+%% Callback function to decrement rotangle
+function rotdec_click(~,~)
+    temp = get(rotangleinput,'String');
+    rotangle = num2str(str2double(temp) - 1);
+    set(rotangleinput,'String',rotangle);
+    showimg(currentimgid);
+end
+
 
 %% Cursor button call back function 
 function curs_on (~, ~) 
@@ -958,6 +986,36 @@ end
 function enter_fitxvar(~, ~)
     xvar=get(fitxvar,'String');
 end
+
+%% Callback function to increment xvar
+function xvarinc_click(~,~)
+    tempx = get(fitxvar,'String');
+    xvar = num2str(str2double(tempx) + 1);
+    set(fitxvar,'String',xvar);
+end
+
+%% Callback function to decrement xvar
+function xvardec_click(~,~)
+    tempx = get(fitxvar,'String');
+    xvar = num2str(max(str2double(tempx) - 1,1));
+    set(fitxvar,'String',xvar);
+end
+
+
+%% Callback function to increment yvar
+function yvarinc_click(~,~)
+    tempy = get(fitoutputnum,'String');
+    yvar = num2str(str2double(tempy) + 1);
+    set(fitoutputnum,'String',yvar);
+end
+
+%% Callback function to decrement yvar
+function yvardec_click(~,~)
+    tempy = get(fitoutputnum,'String');
+    yvar = num2str(max(str2double(tempy) - 1,1));
+    set(fitoutputnum,'String',yvar);
+end
+
 
 %% To update list of all variables in database (SQL can be edited to make it a particular table instead)
 function updatexvardropmenu()
