@@ -668,10 +668,6 @@ end
 function curs_update()
     axes(img)
     hold(img,'on');
-%        xl1 = imline(img, [xcurs(1) xcurs(1) ],[0 1024]);
-%        xl2 = imline(img, [xcurs(2) xcurs(2)],[0 1024]);
-%        yl1 = imline(img, [0 1024], [ycurs(1) ycurs(1)]);
-%        yl2 = imline(img, [0 1024], [ycurs(2) ycurs(2)]);
         xl1 = line([xcurs(1) xcurs(1) ],[1 row]);
         xl2 = line([xcurs(2) xcurs(2)],[1 row]);
         yl1 = line([1 col], [ycurs(1) ycurs(1)]);
@@ -750,57 +746,15 @@ function update_but(~, ~)
     miny=round(min(ycurs));
     maxy=round(max(ycurs));
     data_roi=data(miny:maxy,minx:maxx);     %Change in x & y due to MATLAB notation, plot x in horizontal and y in transverse
-    ncount=n_count(data_roi);
-    norm_n=norm_n_count(data_roi);  %Not data_roi as input because need to take boundary in account
-%For gaussian fitting
-    data_roi=-log(data_roi);
-    r1=sum(data_roi);
-    x=1:length(r1);
-    ft=fittype('a1*exp((-(x-a2)^2)/(2*(a3^2)))+a4','independent',{'x'},'coefficients',{'a1','a2','a3','a4'});
-    gx1=max(r1);
-    gx2=find(r1==gx1);
-    gx3=max(x)/2;
-    gx4=sum(r1)/max(x);
-    f_x=fit(x',r1',ft,'Start',[gx1,gx2,gx3,gx4]);
-    fit_x=coeffvalues(f_x);
-    x_center=fit_x(2)+minx;
-    x_width=fit_x(3)*2^(3/2);
-    r2=sum(data_roi,2);
-    y=1:length(r2);
-    gy1=max(r2);
-    gy2=find(r2==gy1);
-    gy3=max(y)/2;
-    gy4=sum(r2)/max(y);
-    f_y=fit(y',r2,ft,'Start',[gy1,gy2,gy3,gy4]);
-    fit_y=coeffvalues(f_y);
-    y_center=fit_y(2)+miny;
-    y_width=fit_y(3)*2^(3/2);
-    set(quickres, 'String', {['N Count: ' num2str(ncount)]; ['Norm N Count: ' num2str(norm_n)]; ['X Width: ' num2str(x_width)]; ['Y Width: ' num2str(y_width)]; ['X Center: ' num2str(x_center)]; ['Y Center: ' num2str(y_center)]; ['X Curs: ' num2str(round(min(xcurs))) ' , ' num2str(round(max(xcurs)))];['Y Curs: ' num2str(round(min(ycurs))) ' , ' num2str(round(max(ycurs)))];});
-end
-
-%% Function to calculate N Count for Quick Results, called from update_but
-function [n] = n_count(p)
-    u=-log(p);
-    l=sum(u(:));
-    v=real(l);
-    n=round(v);
-end
-
-
-%% Function to calculate Norm N Count for Quick Results, called from update_but
-function [n] = norm_n_count(a)
-    q1=a(1,:);
-    q2=a(end,:);
-    q3=a(:,1);
-    q4=a(:,end);
-    m=[q1(:);q2(:);q3(:);q4(:)];
-    s=mean(m);
-    u2=-log(a);
-    s2=-log(s);
-    u=u2-s2;
-    l=sum(u(:));
-    v=real(l);
-    n=round(v);
+   
+    currentfolder = pwd;
+    fitpath=[currentfolder '\FittingFunctions'];
+    addpath(fitpath);
+    norm_n = NormN_Count(data_roi,0);
+    xGauss = Gauss_Fit(data_roi,1);
+    yGauss = Gauss_Fit(data_roi',1);
+    
+    set(quickres, 'String', {['Norm N Count: ' num2str(norm_n)]; ['X Width: ' num2str(2^(3/2) * xGauss(3))]; ['Y Width: ' num2str(2^(3/2) * yGauss(3))]; ['X Center: ' num2str(xGauss(2))]; ['Y Center: ' num2str(yGauss(2))]; ['X Curs: ' num2str(round(min(xcurs))) ' , ' num2str(round(max(xcurs)))];['Y Curs: ' num2str(round(min(ycurs))) ' , ' num2str(round(max(ycurs)))];});
 end
 
 %% Callback function for fit button to plot results in fitplt
