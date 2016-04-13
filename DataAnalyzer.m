@@ -778,7 +778,7 @@ function update_but(~, ~)
     fit_y=coeffvalues(f_y);
     y_center=fit_y(2)+miny;
     y_width=fit_y(3)*2^(3/2);
-    set(quickres, 'String', {['N Count: ' num2str(ncount)]; ['Norm N Count: ' num2str(norm_n)]; ['X Width: ' num2str(x_width)]; ['Y Width: ' num2str(y_width)]; ['X Center: ' num2str(x_center)]; ['Y Center: ' num2str(y_center)]; ['X Curs: ' num2str(round(min(xcurs))) ' , ' num2str(round(max(xcurs)))];['Y Curs: ' num2str(round(min(ycurs))) ' , ' num2str(round(max(ycurs)))];});
+    set(quickres, 'String', {['Norm N Count: ' num2str(norm_n)]; ['X Width: ' num2str(x_width)]; ['Y Width: ' num2str(y_width)]; ['X Center: ' num2str(x_center)]; ['Y Center: ' num2str(y_center)]; ['X Curs: ' num2str(round(min(xcurs))) ' , ' num2str(round(max(xcurs)))];['Y Curs: ' num2str(round(min(ycurs))) ' , ' num2str(round(max(ycurs)))];});
 end
 
 %% Callback function for fit button to plot results in fitplt
