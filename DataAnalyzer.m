@@ -244,7 +244,6 @@ f.MenuBar = 'None'; % Hide menu bar in GUI
 zoom_img=zoom(img);
 zoom_img.Enable = 'off';
 % dbh=NET.Assembly('DatabaseHelper.dll');
-count=1;
 updatefittypelist();
 updatefitlist();
 updatexvardropmenu();
@@ -252,7 +251,7 @@ updatexvardropmenu();
 
 
 
-while count<2 
+while true 
     if ~ishandle(dblist)
         break;
     end
@@ -469,26 +468,11 @@ end
 
 %% For updating image in 'img', inserted one input parameter as it has to be globally defined
 function showimg(filenum)
-    framenum=get(framelist, 'Value');
-    hdwmodesel=get(hdwmode, 'SelectedObject');
-    imgmode=hdwmodesel.Value;
     imgid=cell2mat(filenum(1));
-    sqlquery2=['SELECT data, cameraID_fk FROM images WHERE imageID = ', num2str(imgid)];
-    curs2=exec(conn, sqlquery2);
-    curs2=fetch(curs2);
-    bdata=curs2.Data;
-    close(curs2);
-    blobdata=typecast(cell2mat(bdata(1)),'int16');
-    
-    sqlquery3=['SELECT cameraHeight, cameraWidth, Depth FROM cameras WHERE cameraID = ', num2str(cell2mat(bdata(2)))];
-    curs3=exec(conn, sqlquery3);
-    curs3=fetch(curs3);
-    camdata=curs3.Data;
-    close(curs3);
-    camdata=cell2mat(camdata);
-    s=[camdata(1),camdata(2),camdata(3)];            
-    a=Blob2Matlab(blobdata,s);
-    r=data_det(a,imgmode, framenum);
+    hdwmodesel=get(hdwmode, 'SelectedObject');
+    framenum=get(framelist, 'Value');
+    imgmode=hdwmodesel.Value;
+    r = getImage(imgid,imgmode,framenum);
 %    axes(img);
     cla(img);
     [~]= imagesc(r, 'Parent', img);
@@ -509,6 +493,26 @@ function showimg(filenum)
         [~] = colorbar(img,'XTickLabel',{num2str(min(r(:))) num2str(max(r(:)))},'XTick', [min(r(:)) max(r(:))]);
     end    
     curs_update();
+end
+
+%% Gets the requested image from the database.
+function [r] = getImage(imgid,imgmode,framenum)
+    sqlquery2=['SELECT data, cameraID_fk FROM images WHERE imageID = ', num2str(imgid)];
+    curs2=exec(conn, sqlquery2);
+    curs2=fetch(curs2);
+    bdata=curs2.Data;
+    close(curs2);
+    blobdata=typecast(cell2mat(bdata(1)),'int16');
+    sqlquery3=['SELECT cameraHeight, cameraWidth, Depth FROM cameras WHERE cameraID = ', num2str(cell2mat(bdata(2)))];
+    curs3=exec(conn, sqlquery3);
+    curs3=fetch(curs3);
+    camdata=curs3.Data;
+    close(curs3);
+    camdata=cell2mat(camdata);
+    s=[camdata(1),camdata(2),camdata(3)];            
+    a=Blob2Matlab(blobdata,s);
+    
+    r=data_det(a,imgmode, framenum);
 end
 
 %% To determine which kind of file it is and process it
@@ -725,21 +729,7 @@ function update_but(~, ~)
     hdwmodesel=get(hdwmode, 'SelectedObject');
     imgmode=hdwmodesel.Value;
     imgid=cell2mat(currentimgid);
-    sqlquery2=['SELECT data,cameraID_fk FROM images WHERE imageID = ', num2str(imgid)];
-    curs2=exec(conn, sqlquery2);
-    curs2=fetch(curs2);
-    bdata=curs2.Data;
-    close(curs2);
-    blobdata=typecast(cell2mat(bdata(1)),'int16');
-    sqlquery3=['SELECT cameraHeight, cameraWidth, Depth FROM cameras WHERE cameraID = ', num2str(cell2mat(bdata(2)))];
-    curs3=exec(conn, sqlquery3);
-    curs3=fetch(curs3);
-    camdata=curs3.Data;
-    close(curs3);
-    camdata=cell2mat(camdata);
-    s=[camdata(1),camdata(2),camdata(3)];            
-    a=Blob2Matlab(blobdata,s);
-    b=data_det(a,imgmode, framenum);
+    b=getImage(imgid,imgmode, framenum);
     data=cast(b,'single');
     minx=round(min(xcurs));
     maxx=round(max(xcurs));
@@ -793,21 +783,7 @@ function fit_click(~, ~)
     for i=1:length(temp_analysislist)
         if temp_analysislist{i} ~= 0 
             imgid=cell2mat(anaimgidlist(i));
-            sqlquery2=['SELECT data,cameraID_fk FROM images WHERE imageID = ', num2str(imgid)];
-            curs2=exec(conn, sqlquery2);
-            curs2=fetch(curs2);
-            bdata=curs2.Data;
-            close(curs2);
-            blobdata=typecast(cell2mat(bdata(1)),'int16');
-            sqlquery3=['SELECT cameraHeight, cameraWidth, Depth FROM cameras WHERE cameraID = ', num2str(cell2mat(bdata(2)))];
-            curs3=exec(conn, sqlquery3);
-            curs3=fetch(curs3);
-            camdata=curs3.Data;
-            close(curs3);
-            camdata=cell2mat(camdata);
-            s=[camdata(1),camdata(2),camdata(3)];            
-            a=Blob2Matlab(blobdata,s);
-            framedata=data_det(a,imgmode, framenum);
+            framedata=getImage(imgid,imgmode, framenum);
             minx=round(min(xcurs));
             maxx=round(max(xcurs));
             miny=round(min(ycurs));
@@ -905,21 +881,7 @@ function singlefit_click(~, ~)
     val= get(analysisdblist,'Value');
     [~]= get(analysisdblist,'String');
     imgid=cell2mat(anaimgidlist(val));
-    sqlquery2=['SELECT data,cameraID_fk FROM images WHERE imageID = ', num2str(imgid)];
-    curs2=exec(conn, sqlquery2);
-    curs2=fetch(curs2);
-    bdata=curs2.Data;
-    close(curs2);
-    blobdata=typecast(cell2mat(bdata(1)),'int16');
-    sqlquery3=['SELECT cameraHeight, cameraWidth, Depth FROM cameras WHERE cameraID = ', num2str(cell2mat(bdata(2)))];
-    curs3=exec(conn, sqlquery3);
-    curs3=fetch(curs3);
-    camdata=curs3.Data;
-    close(curs3);
-    camdata=cell2mat(camdata);
-    s=[camdata(1),camdata(2),camdata(3)];            
-    a=Blob2Matlab(blobdata,s);
-    framedata=data_det(a,imgmode, framenum);
+    framedata=getImage(imgid,imgmode, framenum);
     minx=round(min(xcurs));
     maxx=round(max(xcurs));
     miny=round(min(ycurs));
