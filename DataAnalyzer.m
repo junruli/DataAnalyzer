@@ -552,7 +552,7 @@ function save_click(~, ~)
     sqlquery2=['UPDATE images SET type = ''perm'' WHERE imageID IN (', strjoin(cellstr(num2str(cell2mat(id))),','),')'];
     curs2=exec(conn, sqlquery2);
     close(curs2);
-    updatecurrentimginfo(currentimgid);
+    updatecurrentimginfo(currentimgid(1));
 end    
 
 %% Call back function for delete button for dblist
