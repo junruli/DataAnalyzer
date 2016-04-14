@@ -94,8 +94,10 @@ curs = uicontrol('Style','togglebutton','CData',curs_icon,'Position',[820,650,25
 panbtn = uicontrol('Style','togglebutton','CData', pan_icon, 'Position',[935,650,25,25], 'Callback', @pan_on); %Turn on pan for Img axes
 rotatebtn = uicontrol('Style','togglebutton','CData', rotate_icon, 'Position',[820,610,25,25],'Callback', @rotate_on); %Rotate for Img axes
 rotangleinput = uicontrol('Style','edit','String',rotangle,'Position',[855,610,25,25],'Callback', @enter_rotangle); %Angle to rotate image by
-colormapname = uicontrol('Style','popupmenu','String',{'Color';'B&W'},'Position',[890,610,70,25], 'Callback', @colormapname_click); %Color map for img axes
+colormapname = uicontrol('Style','popupmenu','String',{'Color';'B&W'},'Position',[910,610,50,25], 'Callback', @colormapname_click); %Color map for img axes
 
+rotincrement = uicontrol('Style','pushbutton','String','+','Position',[880,623,25,12],'Callback',@rotinc_click);
+rotdecrement = uicontrol('Style','pushbutton','String','-','Position',[880,610,25,12],'Callback',@rotdec_click);
 
 dblist = uicontrol('Style','listbox', 'min' , 0, 'max' , 400, 'Position', [50, 20, 350,280], 'Value', [], 'Callback', @dblist_click, 'KeyPressFcn', @dblist_keypress); %List from database
 
@@ -137,6 +139,8 @@ showanalysisimgidbut = uicontrol('Style','pushbutton','String','Show','Position'
 fitoutputnum_text = uicontrol('Style','text','String','Output # :','Position',[1210,295,60,25]);
 fitoutputnum = uicontrol('Style','edit','String','1','Position',[1270,300,50,25]); %Number of output variable for fitting
 
+yvarincrement = uicontrol('Style','pushbutton','String','+','Position',[1320,313,25,12],'Callback',@yvarinc_click);
+yvardecrement = uicontrol('Style','pushbutton','String','-','Position',[1320,300,25,12],'Callback',@yvardec_click);
 
 % X Variable for fit
 xvariable_text = uicontrol('Style','text','String','X Variable:','Position',[1290,220,70,25]);
@@ -146,6 +150,9 @@ xvarnamemode = uicontrol('Parent', xvarmode, 'Style','radiobutton','String','Nam
 fitxvar = uicontrol('Style','edit','String',xvar,'Position',[1450,145,50,25], 'Callback', @enter_fitxvar); %X Variable for fitting function
 xvardbmode = uicontrol('Parent', xvarmode, 'Style','radiobutton','String','DB Variable','Units', 'pixels','Position',[10,10,120,25], 'Tag', '3'); %Choose x variable for fitplt from db tables
 xvardropmenu = uicontrol('Style','popupmenu','Position',[1450,110,100,25]); %X Variable from database
+
+xvarincrement = uicontrol('Style','pushbutton','String','+','Position',[1500,158,25,12],'Callback',@xvarinc_click);
+xvardecrement = uicontrol('Style','pushbutton','String','-','Position',[1500,145,25,12],'Callback',@xvardec_click);
 
 % Y variable for fit
 yvariable_text = uicontrol('Style','text','String','Y Variable:','Position',[1050,230,70,25]);
@@ -165,7 +172,6 @@ nextnamecheck = uicontrol('Style','checkbox','String','Specify next name','Posit
 deltempbut = uicontrol('Style','pushbutton','String','Delete Temp Data','Position',[870,90,120,30], 'Callback', @deltemp_click); %Delete temporary data in database
 closefigsbut = uicontrol('Style','pushbutton','String','Close sub figures','Position',[870,20,120,25], 'Callback', @closefig_click); %Close all figures except GUI
 clearlastfitbut= uicontrol('Style','pushbutton','String','Clear last fit data','Position',[870,55,120,25], 'Callback', @clearlastfit_click); %Clears last fit data (to be used in case of change of cursor or angle)
-
 
 
 %% Normalize the components
@@ -236,6 +242,12 @@ fitoutputnum_text.Units = 'normalized';
 fitoutputnum.Units = 'normalized';
 nextnamecheck.Units = 'normalized';
 clearlastfitbut.Units = 'normalized';
+xvarincrement.Units = 'normalized';
+xvardecrement.Units = 'normalized';
+yvarincrement.Units = 'normalized';
+yvardecrement.Units = 'normalized';
+rotincrement.Units = 'normalized';
+rotdecrement.Units = 'normalized';
 
 
 %% Initialize the UI
@@ -244,7 +256,6 @@ f.MenuBar = 'None'; % Hide menu bar in GUI
 zoom_img=zoom(img);
 zoom_img.Enable = 'off';
 % dbh=NET.Assembly('DatabaseHelper.dll');
-count=1;
 updatefittypelist();
 updatefitlist();
 updatexvardropmenu();
@@ -252,7 +263,7 @@ updatexvardropmenu();
 
 
 
-while count<2 
+while true 
     if ~ishandle(dblist)
         break;
     end
@@ -469,26 +480,11 @@ end
 
 %% For updating image in 'img', inserted one input parameter as it has to be globally defined
 function showimg(filenum)
-    framenum=get(framelist, 'Value');
-    hdwmodesel=get(hdwmode, 'SelectedObject');
-    imgmode=hdwmodesel.Value;
     imgid=cell2mat(filenum(1));
-    sqlquery2=['SELECT data, cameraID_fk FROM images WHERE imageID = ', num2str(imgid)];
-    curs2=exec(conn, sqlquery2);
-    curs2=fetch(curs2);
-    bdata=curs2.Data;
-    close(curs2);
-    blobdata=typecast(cell2mat(bdata(1)),'int16');
-    
-    sqlquery3=['SELECT cameraHeight, cameraWidth, Depth FROM cameras WHERE cameraID = ', num2str(cell2mat(bdata(2)))];
-    curs3=exec(conn, sqlquery3);
-    curs3=fetch(curs3);
-    camdata=curs3.Data;
-    close(curs3);
-    camdata=cell2mat(camdata);
-    s=[camdata(1),camdata(2),camdata(3)];            
-    a=Blob2Matlab(blobdata,s);
-    r=data_det(a,imgmode, framenum);
+    hdwmodesel=get(hdwmode, 'SelectedObject');
+    framenum=get(framelist, 'Value');
+    imgmode=hdwmodesel.Value;
+    r = getImage(imgid,imgmode,framenum);
 %    axes(img);
     cla(img);
     [~]= imagesc(r, 'Parent', img);
@@ -509,6 +505,26 @@ function showimg(filenum)
         [~] = colorbar(img,'XTickLabel',{num2str(min(r(:))) num2str(max(r(:)))},'XTick', [min(r(:)) max(r(:))]);
     end    
     curs_update();
+end
+
+%% Gets the requested image from the database.
+function [r] = getImage(imgid,imgmode,framenum)
+    sqlquery2=['SELECT data, cameraID_fk FROM images WHERE imageID = ', num2str(imgid)];
+    curs2=exec(conn, sqlquery2);
+    curs2=fetch(curs2);
+    bdata=curs2.Data;
+    close(curs2);
+    blobdata=typecast(cell2mat(bdata(1)),'int16');
+    sqlquery3=['SELECT cameraHeight, cameraWidth, Depth FROM cameras WHERE cameraID = ', num2str(cell2mat(bdata(2)))];
+    curs3=exec(conn, sqlquery3);
+    curs3=fetch(curs3);
+    camdata=curs3.Data;
+    close(curs3);
+    camdata=cell2mat(camdata);
+    s=[camdata(1),camdata(2),camdata(3)];            
+    a=Blob2Matlab(blobdata,s);
+    
+    r=data_det(a,imgmode, framenum);
 end
 
 %% To determine which kind of file it is and process it
@@ -536,7 +552,7 @@ function save_click(~, ~)
     sqlquery2=['UPDATE images SET type = ''perm'' WHERE imageID IN (', strjoin(cellstr(num2str(cell2mat(id))),','),')'];
     curs2=exec(conn, sqlquery2);
     close(curs2);
-    updatecurrentimginfo(currentimgid);
+    updatecurrentimginfo(currentimgid(1));
 end    
 
 %% Call back function for delete button for dblist
@@ -653,6 +669,22 @@ function enter_rotangle(~, ~)
     showimg(currentimgid);
 end
 
+%% Callback function to increment rotangle
+function rotinc_click(~,~)
+    temp = get(rotangleinput,'String');
+    rotangle = num2str(str2double(temp) + 1);
+    set(rotangleinput,'String',rotangle);
+    showimg(currentimgid);
+end
+
+%% Callback function to decrement rotangle
+function rotdec_click(~,~)
+    temp = get(rotangleinput,'String');
+    rotangle = num2str(str2double(temp) - 1);
+    set(rotangleinput,'String',rotangle);
+    showimg(currentimgid);
+end
+
 
 %% Cursor button call back function 
 function curs_on (~, ~) 
@@ -725,21 +757,7 @@ function update_but(~, ~)
     hdwmodesel=get(hdwmode, 'SelectedObject');
     imgmode=hdwmodesel.Value;
     imgid=cell2mat(currentimgid);
-    sqlquery2=['SELECT data,cameraID_fk FROM images WHERE imageID = ', num2str(imgid)];
-    curs2=exec(conn, sqlquery2);
-    curs2=fetch(curs2);
-    bdata=curs2.Data;
-    close(curs2);
-    blobdata=typecast(cell2mat(bdata(1)),'int16');
-    sqlquery3=['SELECT cameraHeight, cameraWidth, Depth FROM cameras WHERE cameraID = ', num2str(cell2mat(bdata(2)))];
-    curs3=exec(conn, sqlquery3);
-    curs3=fetch(curs3);
-    camdata=curs3.Data;
-    close(curs3);
-    camdata=cell2mat(camdata);
-    s=[camdata(1),camdata(2),camdata(3)];            
-    a=Blob2Matlab(blobdata,s);
-    b=data_det(a,imgmode, framenum);
+    b=getImage(imgid,imgmode, framenum);
     data=cast(b,'single');
     minx=round(min(xcurs));
     maxx=round(max(xcurs));
@@ -793,21 +811,7 @@ function fit_click(~, ~)
     for i=1:length(temp_analysislist)
         if temp_analysislist{i} ~= 0 
             imgid=cell2mat(anaimgidlist(i));
-            sqlquery2=['SELECT data,cameraID_fk FROM images WHERE imageID = ', num2str(imgid)];
-            curs2=exec(conn, sqlquery2);
-            curs2=fetch(curs2);
-            bdata=curs2.Data;
-            close(curs2);
-            blobdata=typecast(cell2mat(bdata(1)),'int16');
-            sqlquery3=['SELECT cameraHeight, cameraWidth, Depth FROM cameras WHERE cameraID = ', num2str(cell2mat(bdata(2)))];
-            curs3=exec(conn, sqlquery3);
-            curs3=fetch(curs3);
-            camdata=curs3.Data;
-            close(curs3);
-            camdata=cell2mat(camdata);
-            s=[camdata(1),camdata(2),camdata(3)];            
-            a=Blob2Matlab(blobdata,s);
-            framedata=data_det(a,imgmode, framenum);
+            framedata=getImage(imgid,imgmode, framenum);
             minx=round(min(xcurs));
             maxx=round(max(xcurs));
             miny=round(min(ycurs));
@@ -905,21 +909,7 @@ function singlefit_click(~, ~)
     val= get(analysisdblist,'Value');
     [~]= get(analysisdblist,'String');
     imgid=cell2mat(anaimgidlist(val));
-    sqlquery2=['SELECT data,cameraID_fk FROM images WHERE imageID = ', num2str(imgid)];
-    curs2=exec(conn, sqlquery2);
-    curs2=fetch(curs2);
-    bdata=curs2.Data;
-    close(curs2);
-    blobdata=typecast(cell2mat(bdata(1)),'int16');
-    sqlquery3=['SELECT cameraHeight, cameraWidth, Depth FROM cameras WHERE cameraID = ', num2str(cell2mat(bdata(2)))];
-    curs3=exec(conn, sqlquery3);
-    curs3=fetch(curs3);
-    camdata=curs3.Data;
-    close(curs3);
-    camdata=cell2mat(camdata);
-    s=[camdata(1),camdata(2),camdata(3)];            
-    a=Blob2Matlab(blobdata,s);
-    framedata=data_det(a,imgmode, framenum);
+    framedata=getImage(imgid,imgmode, framenum);
     minx=round(min(xcurs));
     maxx=round(max(xcurs));
     miny=round(min(ycurs));
@@ -953,7 +943,7 @@ function resx = xvardet(n)
             splitfilename=strsplit(name);
             b=cellfun(@str2double,splitfilename(:),'un',0).';
             v=int32(str2double(xvar));
-            na=cell2mat(b(v));
+            na=cell2mat(b(min(v,length(b))));
             if isnan(na)
                 na = 0;
             end
@@ -996,6 +986,36 @@ end
 function enter_fitxvar(~, ~)
     xvar=get(fitxvar,'String');
 end
+
+%% Callback function to increment xvar
+function xvarinc_click(~,~)
+    tempx = get(fitxvar,'String');
+    xvar = num2str(str2double(tempx) + 1);
+    set(fitxvar,'String',xvar);
+end
+
+%% Callback function to decrement xvar
+function xvardec_click(~,~)
+    tempx = get(fitxvar,'String');
+    xvar = num2str(max(str2double(tempx) - 1,1));
+    set(fitxvar,'String',xvar);
+end
+
+
+%% Callback function to increment yvar
+function yvarinc_click(~,~)
+    tempy = get(fitoutputnum,'String');
+    yvar = num2str(str2double(tempy) + 1);
+    set(fitoutputnum,'String',yvar);
+end
+
+%% Callback function to decrement yvar
+function yvardec_click(~,~)
+    tempy = get(fitoutputnum,'String');
+    yvar = num2str(max(str2double(tempy) - 1,1));
+    set(fitoutputnum,'String',yvar);
+end
+
 
 %% To update list of all variables in database (SQL can be edited to make it a particular table instead)
 function updatexvardropmenu()
