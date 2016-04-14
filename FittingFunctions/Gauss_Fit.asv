@@ -1,0 +1,5 @@
+function [ output_args ] = Gauss_Fit( u, eachplot )
+
+
+end
+

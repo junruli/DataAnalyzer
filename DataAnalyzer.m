@@ -513,60 +513,7 @@ end
 
 %% To determine which kind of file it is and process it
 function [r] = data_det(a, imgmode, framenum)
-    if imgmode == 1
-        a_1=a(:,:,1); %PWA
-        a_2=a(:,:,2); %PWOA
-        a_3=a(:,:,3); %DF
-    elseif imgmode == 2
-        a_1=a(:,1:length(a)/2,1); %PWA
-        a_2=a(:,length(a)/2:length(a),1); %PWOA
-        a_3=a(:,1:length(a)/2,2); %DF
-    end
-    [m,n]=size(a_1);
-% To determine and correct value of pixels
-    for i=1:m
-        for j=1:n
-            if a_1(i,j) > 65535
-                a_1(i,j)=65535;
-            elseif a_1(i,j) < a_3(i,j)
-                a_1(i,j)= a_3(i,j);
-            end
-        end
-    end
-    a_up=a_1-a_3;
-    a_down=a_2-a_3;
-    for i=1:m
-        for j=1:n
-            if a_down(i,j) > 65535
-                a_down(i,j)=65535;
-            elseif a_down(i,j) < 1
-                a_down(i,j) = 1;
-            end
-        end
-    end
-    a_up=double(a_up);      %Need to convert to double, else all value is converted to integer
-    a_down=double(a_down);
-    switch framenum
-        case 1
-            r=a_up./a_down;
-            for i=1:m
-                for j=1:n
-                    if r(i,j) > 2
-                        r(i,j)=2;
-                    elseif r(i,j) < 0.01
-                        r(i,j) = 0.01;
-                    end
-                end
-            end
-        case 2
-            r=a_1;
-        case 3
-            r=a_2;
-        case 4
-            r=a_3;
-        case 5
-            r=a_3;
-    end
+    r = data_evaluation(a, imgmode,framenum);
     button_state = get(rotatebtn,'Value');
     if button_state == get(rotatebtn,'Max')
         r=imrotate(r, str2double(rotangle), 'bilinear', 'loose');          %Imrotate type and crop property can be defined here
@@ -721,10 +668,6 @@ end
 function curs_update()
     axes(img)
     hold(img,'on');
-%        xl1 = imline(img, [xcurs(1) xcurs(1) ],[0 1024]);
-%        xl2 = imline(img, [xcurs(2) xcurs(2)],[0 1024]);
-%        yl1 = imline(img, [0 1024], [ycurs(1) ycurs(1)]);
-%        yl2 = imline(img, [0 1024], [ycurs(2) ycurs(2)]);
         xl1 = line([xcurs(1) xcurs(1) ],[1 row]);
         xl2 = line([xcurs(2) xcurs(2)],[1 row]);
         yl1 = line([1 col], [ycurs(1) ycurs(1)]);
@@ -803,57 +746,15 @@ function update_but(~, ~)
     miny=round(min(ycurs));
     maxy=round(max(ycurs));
     data_roi=data(miny:maxy,minx:maxx);     %Change in x & y due to MATLAB notation, plot x in horizontal and y in transverse
-    ncount=n_count(data_roi);
-    norm_n=norm_n_count(data_roi);  %Not data_roi as input because need to take boundary in account
-%For gaussian fitting
-    data_roi=-log(data_roi);
-    r1=sum(data_roi);
-    x=1:length(r1);
-    ft=fittype('a1*exp((-(x-a2)^2)/(2*(a3^2)))+a4','independent',{'x'},'coefficients',{'a1','a2','a3','a4'});
-    gx1=max(r1);
-    gx2=find(r1==gx1);
-    gx3=max(x)/2;
-    gx4=sum(r1)/max(x);
-    f_x=fit(x',r1',ft,'Start',[gx1,gx2,gx3,gx4]);
-    fit_x=coeffvalues(f_x);
-    x_center=fit_x(2)+minx;
-    x_width=fit_x(3)*2^(3/2);
-    r2=sum(data_roi,2);
-    y=1:length(r2);
-    gy1=max(r2);
-    gy2=find(r2==gy1);
-    gy3=max(y)/2;
-    gy4=sum(r2)/max(y);
-    f_y=fit(y',r2,ft,'Start',[gy1,gy2,gy3,gy4]);
-    fit_y=coeffvalues(f_y);
-    y_center=fit_y(2)+miny;
-    y_width=fit_y(3)*2^(3/2);
-    set(quickres, 'String', {['N Count: ' num2str(ncount)]; ['Norm N Count: ' num2str(norm_n)]; ['X Width: ' num2str(x_width)]; ['Y Width: ' num2str(y_width)]; ['X Center: ' num2str(x_center)]; ['Y Center: ' num2str(y_center)]; ['X Curs: ' num2str(round(min(xcurs))) ' , ' num2str(round(max(xcurs)))];['Y Curs: ' num2str(round(min(ycurs))) ' , ' num2str(round(max(ycurs)))];});
-end
-
-%% Function to calculate N Count for Quick Results, called from update_but
-function [n] = n_count(p)
-    u=-log(p);
-    l=sum(u(:));
-    v=real(l);
-    n=round(v);
-end
-
-
-%% Function to calculate Norm N Count for Quick Results, called from update_but
-function [n] = norm_n_count(a)
-    q1=a(1,:);
-    q2=a(end,:);
-    q3=a(:,1);
-    q4=a(:,end);
-    m=[q1(:);q2(:);q3(:);q4(:)];
-    s=mean(m);
-    u2=-log(a);
-    s2=-log(s);
-    u=u2-s2;
-    l=sum(u(:));
-    v=real(l);
-    n=round(v);
+   
+    currentfolder = pwd;
+    fitpath=[currentfolder '\FittingFunctions'];
+    addpath(fitpath);
+    norm_n = NormN_Count(data_roi,0);
+    xGauss = Gauss_Fit(data_roi,1);
+    yGauss = Gauss_Fit(data_roi',1);
+    
+    set(quickres, 'String', {['Norm N Count: ' num2str(norm_n)]; ['X Width: ' num2str(2^(3/2) * xGauss(3))]; ['Y Width: ' num2str(2^(3/2) * yGauss(3))]; ['X Center: ' num2str(xGauss(2))]; ['Y Center: ' num2str(yGauss(2))]; ['X Curs: ' num2str(round(min(xcurs))) ' , ' num2str(round(max(xcurs)))];['Y Curs: ' num2str(round(min(ycurs))) ' , ' num2str(round(max(ycurs)))];});
 end
 
 %% Callback function for fit button to plot results in fitplt
@@ -941,20 +842,26 @@ function fit_click(~, ~)
         theta=fminsearch(ls, theta0);
         volts_5recoil=(0.0000125*1000*2*pi*5*2.02781)/(2*theta);
         resultx = zeros(1,length(anaimgidlist));
-        resulty = zeros(1,length(anaimgidlist));
+        resulty0 = zeros(1,length(anaimgidlist));
+        resulty1 = zeros(1,length(anaimgidlist));
+        resulty2 = zeros(1,length(anaimgidlist));
         for i=1:length(anaimgidlist)
-            resulty(i)=besselj(0,theta*resx(i));
+            resulty0(i)=resy(i,1);
+            resulty1(i)=resy(i,2);
+            resulty2(i)=resy(i,3);
             resultx(i)=theta*resx(i);
         end
         showdata1='';
-        for i=1:length(resulty)
-            showdata1{i}=sprintf('%s , %s', num2str(resx(i)), num2str(resulty(i)));
+        for i=1:length(resulty0)
+            showdata1{i}=sprintf('%s , %s', num2str(resx(i)), num2str(resulty0(i)));
         end
         showdata=sprintf('\n%s', showdata1{:});
         axes(fitplt);
-        scatter(resultx,resulty);
+        plot(resultx,resulty0,'bo',resultx,resulty1,'ro',resultx,resulty2,'go');
         hold on
-        fplot(@(x) besselj(0,x), [min(resultx) max(resultx)]);
+        fplot(@(x) besselj(0,x)^2, [min(resultx) max(resultx)],'b');
+        fplot(@(x) besselj(1,x)^2, [min(resultx) max(resultx)],'r');
+        fplot(@(x) besselj(2,x)^2, [min(resultx) max(resultx)],'g');
         hold off
         set(fitres,'String',{'Results:';['Theta: ' num2str(theta)];['Volts/5 Erec: ' num2str(volts_5recoil)];['Bessel 0 Data: ' showdata]});
     else
@@ -1047,6 +954,9 @@ function resx = xvardet(n)
             b=cellfun(@str2double,splitfilename(:),'un',0).';
             v=int32(str2double(xvar));
             na=cell2mat(b(v));
+            if isnan(na)
+                na = 0;
+            end
             resx(i)=na;
         end
     elseif xvarmodevalue == '3'
