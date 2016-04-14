@@ -943,7 +943,7 @@ function resx = xvardet(n)
             splitfilename=strsplit(name);
             b=cellfun(@str2double,splitfilename(:),'un',0).';
             v=int32(str2double(xvar));
-            na=cell2mat(b(v));
+            na=cell2mat(b(min(v,length(b))));
             if isnan(na)
                 na = 0;
             end
