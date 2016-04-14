@@ -578,7 +578,7 @@ function load_click(~, ~)
     newid=inputdlg('Enter Image ID:', 'Load');
     a=cell2mat(newid);
     l=length(imgidlist);
-    imgidlist(l+1)=num2cell(int32(str2double(a)));
+    imgidlist(l+1)=num2cell(str2double(a));
     updatedblist();
 end
 
