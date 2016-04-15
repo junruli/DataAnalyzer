@@ -45,6 +45,7 @@ deltemp_click(source, eventdata) - delete all images which are stored as 'temp'
 closefig_click(source, eventdata) - close all figures except GUI
 showanalysisimgid_click(source, eventdata) - show selected image from analysisdblist in img axes
 clearlastfit_click(source, eventdata) - clears data saved from last fit (required when fit after changing cursor or angle)
+nextimgname_enter(source, eventdata) - To update string of nextimgname edit box on pressing enter
 %}
 
 %%
@@ -107,7 +108,7 @@ loadbut = uicontrol('Style','pushbutton','String','Load','Position',[440,210,70,
 delbut = uicontrol('Style','pushbutton','String','Delete','Position',[440,100,70,25], 'Callback', @del_click); %Delete data from dblist
 add2anabut = uicontrol('Style','pushbutton','String','Add2Analysis','Position',[440,265,70,25], 'Callback', @add2ana_click); %Add files selected in dblist to analysisdblist
 nextimgname_text = uicontrol('Style','text','String','Next Image Name:','Position',[440,45,90,15]);
-nextimgname = uicontrol('Style','edit','Position',[440,20,160,25]); %Next shot name
+nextimgname = uicontrol('Style','edit','Position',[440,20,160,25],'KeyPressFcn', @nextimgname_enter); %Next shot name
 
 %Status boxes for dblist
 imgid_text = uicontrol('Style','text','String','Image ID:','Position',[590,275,70,25]);
@@ -769,8 +770,8 @@ function update_but(~, ~)
     fitpath=[currentfolder '\FittingFunctions'];
     addpath(fitpath);
     norm_n = NormN_Count(data_roi,0);
-    xGauss = Gauss_Fit(data_roi,1);
-    yGauss = Gauss_Fit(data_roi',1);
+    xGauss = Gauss_Fit(data_roi,0);
+    yGauss = Gauss_Fit(data_roi',0);
     
     set(quickres, 'String', {['Norm N Count: ' num2str(norm_n)]; ['X Width: ' num2str(2^(3/2) * xGauss(3))]; ['Y Width: ' num2str(2^(3/2) * yGauss(3))]; ['X Center: ' num2str(xGauss(2))]; ['Y Center: ' num2str(yGauss(2))]; ['X Curs: ' num2str(round(min(xcurs))) ' , ' num2str(round(max(xcurs)))];['Y Curs: ' num2str(round(min(ycurs))) ' , ' num2str(round(max(ycurs)))];});
 end
@@ -1079,6 +1080,14 @@ end
 %% Clears data saved from last fit (required when fit after changing cursor or angle)
 function clearlastfit_click(~, ~)
     setappdata(f, 'ids', []);
+end
+
+%% To update string of nextimgname edit box on pressing enter 
+function nextimgname_enter(~, eventdata)
+    k=eventdata.Key;
+    if strcmp(k,'return')
+        uicontrol(nextimgname_text);        %Changes focus to other object than edit textbox to update nexxtimgname string
+    end
 end
 
 end
