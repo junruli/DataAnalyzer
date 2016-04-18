@@ -65,7 +65,7 @@ row=1024;
 xcurs=[1 col];
 ycurs=[1 row];
 xvar='1';
-conn = database('becivdatabase', 'root', 'w0lfg4ng', 'Server', 'spicythaitofu', 'Vendor', 'MySQL'); %Specify name of database here
+conn = database('becivdatabase', 'root', 'w0lfg4ng', 'Server', '18.62.27.134', 'Vendor', 'MySQL'); %Specify name of database here
 imgidlist=[];
 anaimgidlist=[];
 updateimgidlist();
