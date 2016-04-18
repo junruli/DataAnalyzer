@@ -3,6 +3,7 @@ function [ fitParams ] = Gauss_Fit( a, eachplot )
 % fitParams(2) = center
 % fitParams(3) = sigma
 
+    a = double(a);
     q1=a(1,:);
     q2=a(end,:);
     q3=a(:,1);
@@ -16,7 +17,7 @@ function [ fitParams ] = Gauss_Fit( a, eachplot )
     r = sum(u)';
     x = (1:length(r))';
     
-    fout = fit(x,r,'gauss1');
+    fout = fit(x,double(r),'gauss1');
     coeffs = coeffvalues(fout);
     
     if eachplot

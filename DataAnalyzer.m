@@ -81,8 +81,10 @@ rotangle='0';
 img = axes('Units','pixels','Position',[50,330,750,600]);  %Main image from database
 
 % Quick update for data in img
-updatebut = uicontrol('Style','pushbutton','String','Update [F5]','Position',[855,550,70,25], 'Callback', @update_but); %Fit files selected from dblist into fitplt
+updatebut = uicontrol('Style','pushbutton','String','Update [F5]','Position',[820,550,70,25], 'Callback', @update_but); %Fit files selected from dblist into fitplt
 quickres = uicontrol('Style','edit','String','Quick Results','min', 0, 'max', 100, 'Position',[820,380,150,150]); %Quick results for img
+autoupbox = uicontrol('Style','checkbox','String','Auto Update','Position',[895,552,120,20], 'Value', 0); %Update the quick results after changing the image.
+
 
 % Mode of image in img
 framelist = uicontrol('Style','listbox', 'min' , 0, 'max' , 1, 'Position', [820, 690, 150,100], 'String', {'Absorption Image','Probe with Atoms','Probe without Atoms','Dark Field','Dark Field (Dual DF)'}, 'Callback', @framelist_click); %List of frames
@@ -251,6 +253,7 @@ yvarincrement.Units = 'normalized';
 yvardecrement.Units = 'normalized';
 rotincrement.Units = 'normalized';
 rotdecrement.Units = 'normalized';
+autoupbox.Units = 'normalized';
 
 
 %% Initialize the UI
@@ -510,6 +513,10 @@ function showimg(filenum)
         [~] = colorbar(img,'XTickLabel',{num2str(min(r(:))) num2str(max(r(:)))},'XTick', [min(r(:)) max(r(:))]);
     end    
     curs_update();
+    
+    if get(autoupbox,'Value') == 1
+        update_but(0,0);
+    end
 end
 
 %% Gets the requested image from the database.
