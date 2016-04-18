@@ -45,6 +45,9 @@ deltemp_click(source, eventdata) - delete all images which are stored as 'temp'
 closefig_click(source, eventdata) - close all figures except GUI
 showanalysisimgid_click(source, eventdata) - show selected image from analysisdblist in img axes
 clearlastfit_click(source, eventdata) - clears data saved from last fit (required when fit after changing cursor or angle)
+nextimgname_enter(source, eventdata) - To update string of nextimgname edit box on pressing enter
+imgname_enter(source, eventdata) - To update string of imgname edit box on pressing enter
+globalShortcuts(source, eventdata) - To maneuver with keyboard shortcuts
 %}
 
 %%
@@ -53,7 +56,7 @@ function DataAnalyzer
 
 
 %  Create UI 
-f = figure('Name', 'Data Analysis Software','Visible','on','Position',[50,50,1600,950]);
+f = figure('Name', 'Data Analysis Software','Visible','on','Position',[50,50,1600,950],'WindowKeyPressFcn',@globalShortcuts);
 
 [zoom_icon,pan_icon,curs_icon,rotate_icon]=icon_update();
 
@@ -78,7 +81,7 @@ rotangle='0';
 img = axes('Units','pixels','Position',[50,330,750,600]);  %Main image from database
 
 % Quick update for data in img
-updatebut = uicontrol('Style','pushbutton','String','Update','Position',[820,550,70,25], 'Callback', @update_but); %Fit files selected from dblist into fitplt
+updatebut = uicontrol('Style','pushbutton','String','Update [F5]','Position',[820,550,70,25], 'Callback', @update_but); %Fit files selected from dblist into fitplt
 quickres = uicontrol('Style','edit','String','Quick Results','min', 0, 'max', 100, 'Position',[820,380,150,150]); %Quick results for img
 autoupbox = uicontrol('Style','checkbox','String','Auto Update','Position',[895,552,120,20], 'Value', 0); %Update the quick results after changing the image.
 
@@ -108,14 +111,14 @@ savebut = uicontrol('Style','pushbutton','String','Save','Position',[440,155,70,
 loadbut = uicontrol('Style','pushbutton','String','Load','Position',[440,210,70,25], 'Callback', @load_click); %Load data manually (from permanenet database)
 delbut = uicontrol('Style','pushbutton','String','Delete','Position',[440,100,70,25], 'Callback', @del_click); %Delete data from dblist
 add2anabut = uicontrol('Style','pushbutton','String','Add2Analysis','Position',[440,265,70,25], 'Callback', @add2ana_click); %Add files selected in dblist to analysisdblist
-nextimgname_text = uicontrol('Style','text','String','Next Image Name:','Position',[440,45,90,15]);
-nextimgname = uicontrol('Style','edit','Position',[440,20,160,25]); %Next shot name
+nextimgname_text = uicontrol('Style','text','String','Next Image Name: [Ins]','Position',[440,45,120,15]);
+nextimgname = uicontrol('Style','edit','Position',[440,20,160,25],'KeyPressFcn', @nextimgname_enter); %Next shot name
 
 %Status boxes for dblist
 imgid_text = uicontrol('Style','text','String','Image ID:','Position',[590,275,70,25]);
 imgidbox = uicontrol('Style','edit','String','Image ID','Position',[650,280,170,25]); %Display imageID of selected image in dblist
 imgname_text = uicontrol('Style','text','String','Image Name:','Position',[580,230,70,25]);
-imgname = uicontrol('Style','edit','String','Image Name','Position',[650,235,170,25], 'Callback', @rename_imgname); %Rename selected image in dblist
+imgname = uicontrol('Style','edit','String','Image Name','Position',[650,235,170,25], 'Callback', @rename_imgname, 'KeyPressFcn', @imgname_enter); %Rename selected image in dblist
 timestmp_text = uicontrol('Style','text','String','Timestamp:','Position',[580,185,70,25]);
 timestmpstatus = uicontrol('Style','edit','String','Timestamp','Position',[650,190,170,25]); %Displays timestamp of selected image in dblist
 savestatus_text = uicontrol('Style','text','String','Saved:','Position',[590,140,37,25]);
@@ -131,7 +134,7 @@ fitplt = axes('Units','pixels','Position',[1050,480,500,450]);  %Fitting functio
 %singplt = axes('Units','pixels','Position',[1280,680,300,250]);  %Single data plot
 
 % Fit button and result
-fitbut = uicontrol('Style','pushbutton','String','Fit','Position',[1455,55,80,30], 'Callback', @fit_click); %Fit files selected from analysisdblist into fitplt
+fitbut = uicontrol('Style','pushbutton','String','Fit [F9]','Position',[1455,55,80,30], 'Callback', @fit_click); %Fit files selected from analysisdblist into fitplt
 singlefitbut = uicontrol('Style','pushbutton','String','Fit selected image','Position',[1450,20,100,25], 'Callback', @singlefit_click); %Fit single file selected from analysisdblist into fitplt
 cftoolbut = uicontrol('Style','pushbutton','String','CFTool','Position',[1240,260,80,25], 'Callback', @cftool_click); %Opens cftool with x & y data from results
 fitplotcheck = uicontrol('Style','checkbox','String','Plot fit for each shot','Position',[1320,60,120,20], 'Value', 0); %To check if each shot gives plot for fit
@@ -410,6 +413,8 @@ function dblist_keypress(source, eventdata)
     key = get(gcf,'CurrentKey');
     if(strcmp (key , 'delete'))
         del_click(source, eventdata);
+    elseif(strcmp (key , 'rightarrow'))
+        add2ana_click(source, eventdata);
     end
 end    
 
@@ -1086,6 +1091,34 @@ end
 %% Clears data saved from last fit (required when fit after changing cursor or angle)
 function clearlastfit_click(~, ~)
     setappdata(f, 'ids', []);
+end
+
+%% To update string of nextimgname edit box on pressing enter 
+function nextimgname_enter(~, eventdata)
+    k=eventdata.Key;
+    if strcmp(k,'return')
+        uicontrol(nextimgname_text);        %Changes focus to other object than edit textbox to update nexxtimgname string
+    end
+end
+
+%% To update string of imgname edit box on pressing enter 
+function imgname_enter(~, eventdata)
+    k=eventdata.Key;
+    if strcmp(k,'return')
+        uicontrol(imgname_text);        %Changes focus to other object than edit textbox to update imgname string
+    end
+end
+
+%% To maneuver with keyboard shortcuts
+function globalShortcuts(source, eventdata)
+    k=eventdata.Key;
+    if strcmp(k,'f5')
+        update_but(source,eventdata);
+    elseif strcmp(k,'f9')
+        fit_click(source,eventdata);
+    elseif strcmp(k,'insert')
+        uicontrol(nextimgname);
+    end
 end
 
 end
