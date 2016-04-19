@@ -61,7 +61,7 @@ f = figure('Name', 'Data Analysis Software','Visible','on','Position',[50,50,160
 [zoom_icon,pan_icon,curs_icon,rotate_icon]=icon_update();
 
 % "Global" Variables
-numImages = 500; % the number of images viewable in the data analyzer
+numImages = 50; % the number of images viewable in the data analyzer
 
 col=1024;
 row=1024;
@@ -128,6 +128,7 @@ seqidstatus_text = uicontrol('Style','text','String','Sequence ID:','Position',[
 seqidstatus = uicontrol('Style','edit','String','ID','Position',[770,145,50,25]); %Displays seq ID of selected image in dblist
 seqnamestatus_text = uicontrol('Style','text','String','Sequence Name:','Position',[550,95,90,25]);
 seqnamestatus = uicontrol('Style','edit','String','Sequence Name','Position',[650,100,170,25]); %Displays seq name of selected image in dblist
+shownamecheck = uicontrol('Style','checkbox','String','Show in list','Position',[690,80,120,20], 'Value', 0); %Show the sequence name in dblist
 seqdescstatus_text = uicontrol('Style','text','String','Sequence Description:','Position',[610,40,70,35]);
 seqdescstatus = uicontrol('Style','edit','min',0,'max',10,'String','Sequence Description','Position',[680,20,140,60]); %Displays seq description of selected image in dblist
 
@@ -256,6 +257,7 @@ rotincrement.Units = 'normalized';
 rotdecrement.Units = 'normalized';
 autoupbox.Units = 'normalized';
 addnext.Units = 'normalized';
+shownamecheck.Units = 'normalized';
 
 
 %% Initialize the UI
@@ -382,6 +384,23 @@ function updatedblist()
             if any(cell2mat(imgidlist(i))==cell2mat(anaimgidlist))
                 db(i) = strcat('*',db(i));
             end
+        end
+    end
+    if get(shownamecheck,'Value') == 1
+        for i = 1:length(db)
+            %SeqID
+            sqlquery=['SELECT sequenceID_fk FROM images WHERE imageID =', num2str(cell2mat(imgidlist(i)))];
+            curs1=exec(conn, sqlquery);
+            curs1=fetch(curs1);
+            seqID = curs1.Data;
+            close(curs1);
+            %SeqName
+            sqlquery=['SELECT name FROM sequence WHERE sequenceID =', num2str(cell2mat(seqID))];
+            curs1=exec(conn, sqlquery);
+            curs1=fetch(curs1);
+            info2 = curs1.Data;
+            close(curs1);
+            db(i) = strcat(info2, {' '}, db(i));
         end
     end
     set(dblist, 'string', db);
