@@ -61,7 +61,7 @@ f = figure('Name', 'Data Analysis Software','Visible','on','Position',[50,50,160
 [zoom_icon,pan_icon,curs_icon,rotate_icon]=icon_update();
 
 % "Global" Variables
-numImages = 500; % the number of images viewable in the data analyzer
+numImages = 50; % the number of images viewable in the data analyzer
 
 col=1024;
 row=1024;
@@ -387,28 +387,37 @@ function updatedblist()
         end
     end
     if get(shownamecheck,'Value') == 1
-        
-        for i = 1:length(db)
         %SeqID
-    sqlquery=['SELECT sequenceID_fk FROM images WHERE imageID =', num2str(cell2mat(currentimgid))];
-    curs1=exec(conn, sqlquery);
-    curs1=fetch(curs1);
-    seqID = curs1.Data;
-    close(curs1);
-    set(seqidstatus, 'string', seqID);
-%SeqName
-    sqlquery=['SELECT name FROM sequence WHERE sequenceID =', num2str(cell2mat(seqID))];
-    curs1=exec(conn, sqlquery);
-    curs1=fetch(curs1);
-    info2 = curs1.Data;
-    close(curs1);
-    set(seqnamestatus, 'string', info2);
+        sqlquery = ['SELECT sequenceID_fk FROM images WHERE imageID IN (', strjoin(cellstr(num2str(cell2mat(imgidlist))),','),') ORDER BY imageID DESC'];
+        curs1=exec(conn, sqlquery);
+        curs1=fetch(curs1);
+        seqID = curs1.Data;
+        close(curs1);
+        
+        %SeqName
+        sqlquery=['SELECT name FROM sequence WHERE sequenceID =', strjoin(cellstr(num2str(cell2mat(seqIDlist)))];
+        sqlquery=['SELECT name FROM sequence WHERE sequenceID =', num2str(cell2mat(seqID))];
+        curs1=exec(conn, sqlquery);
+        curs1=fetch(curs1);
+        info2 = curs1.Data;
+        close(curs1);
 
-    
-    
-        
-        
-        
+
+%         for i = 1:length(db)
+%             %SeqID
+%             sqlquery=['SELECT sequenceID_fk FROM images WHERE imageID =', num2str(cell2mat(imgidlist(i)))];
+%             curs1=exec(conn, sqlquery);
+%             curs1=fetch(curs1);
+%             seqID = curs1.Data;
+%             close(curs1);
+%             %SeqName
+%             sqlquery=['SELECT name FROM sequence WHERE sequenceID =', num2str(cell2mat(seqID))];
+%             curs1=exec(conn, sqlquery);
+%             curs1=fetch(curs1);
+%             info2 = curs1.Data;
+%             close(curs1);
+%             db(i) = strcat(info2, {' '}, db(i));
+%         end
     end
     set(dblist, 'string', db);
 end
