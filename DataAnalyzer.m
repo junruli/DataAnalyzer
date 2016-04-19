@@ -111,6 +111,7 @@ savebut = uicontrol('Style','pushbutton','String','Save','Position',[440,155,70,
 loadbut = uicontrol('Style','pushbutton','String','Load','Position',[440,210,70,25], 'Callback', @load_click); %Load data manually (from permanenet database)
 delbut = uicontrol('Style','pushbutton','String','Delete','Position',[440,100,70,25], 'Callback', @del_click); %Delete data from dblist
 add2anabut = uicontrol('Style','pushbutton','String','Add2Analysis','Position',[440,265,70,25], 'Callback', @add2ana_click); %Add files selected in dblist to analysisdblist
+addnext = uicontrol('Style','checkbox','String','Add Next','Position',[440,240,120,20], 'Value', 0); %Add the next shot to analysisdblist
 nextimgname_text = uicontrol('Style','text','String','Next Image Name: [Ins]','Position',[440,45,120,15]);
 nextimgname = uicontrol('Style','edit','Position',[440,20,160,25],'KeyPressFcn', @nextimgname_enter); %Next shot name
 
@@ -127,6 +128,7 @@ seqidstatus_text = uicontrol('Style','text','String','Sequence ID:','Position',[
 seqidstatus = uicontrol('Style','edit','String','ID','Position',[770,145,50,25]); %Displays seq ID of selected image in dblist
 seqnamestatus_text = uicontrol('Style','text','String','Sequence Name:','Position',[550,95,90,25]);
 seqnamestatus = uicontrol('Style','edit','String','Sequence Name','Position',[650,100,170,25]); %Displays seq name of selected image in dblist
+shownamecheck = uicontrol('Style','checkbox','String','Show in list','Position',[690,80,120,20], 'Value', 0); %Show the sequence name in dblist
 seqdescstatus_text = uicontrol('Style','text','String','Sequence Description:','Position',[610,40,70,35]);
 seqdescstatus = uicontrol('Style','edit','min',0,'max',10,'String','Sequence Description','Position',[680,20,140,60]); %Displays seq description of selected image in dblist
 
@@ -254,6 +256,8 @@ yvardecrement.Units = 'normalized';
 rotincrement.Units = 'normalized';
 rotdecrement.Units = 'normalized';
 autoupbox.Units = 'normalized';
+addnext.Units = 'normalized';
+shownamecheck.Units = 'normalized';
 
 
 %% Initialize the UI
@@ -337,6 +341,10 @@ function updateimgidlist()
         showimg(currentimgid);
         [y,Fs] = audioread('sound.wav');
         sound(y,Fs);
+        if get(addnext,'Value') == 1
+            anaimgidlist=[anaimgidlist; currentimgid];
+            updateanalysisdblist();
+        end
     end
     close(curs1);
 end    
@@ -366,11 +374,21 @@ end
 %% Updates database list
 function updatedblist()
     % Sql code for getting name of images
-    sqlquery = ['SELECT name FROM images WHERE imageID IN (', strjoin(cellstr(num2str(cell2mat(imgidlist))),','),') ORDER BY imageID DESC'];
-    curs1=exec(conn, sqlquery);
-    curs1=fetch(curs1);
-    db = curs1.Data;
-    close(curs1);
+    if get(shownamecheck,'Value') == 1
+        sqlquery = ['SELECT sequence.name, images.name FROM sequence, images WHERE (sequence.sequenceID = images.sequenceID_fk AND images.imageID IN(', strjoin(cellstr(num2str(cell2mat(imgidlist))),','),')) ORDER BY images.imageID DESC'];
+        curs1=exec(conn, sqlquery);
+        curs1=fetch(curs1);
+        db = curs1.Data;
+        close(curs1);
+        db = strcat(db(:,1),{': '},db(:,2));
+    else
+        sqlquery = ['SELECT name FROM images WHERE imageID IN (', strjoin(cellstr(num2str(cell2mat(imgidlist))),','),') ORDER BY imageID DESC'];
+        curs1=exec(conn, sqlquery);
+        curs1=fetch(curs1);
+        db = curs1.Data;
+        close(curs1);
+    end
+    
     if ~isempty(anaimgidlist)
         for i = 1:length(db)
             if any(cell2mat(imgidlist(i))==cell2mat(anaimgidlist))
