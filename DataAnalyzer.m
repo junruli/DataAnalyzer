@@ -374,52 +374,27 @@ end
 %% Updates database list
 function updatedblist()
     % Sql code for getting name of images
-    sqlquery = ['SELECT name FROM images WHERE imageID IN (', strjoin(cellstr(num2str(cell2mat(imgidlist))),','),') ORDER BY imageID DESC'];
-    curs1=exec(conn, sqlquery);
-    curs1=fetch(curs1);
-    db = curs1.Data;
-    close(curs1);
+    if get(shownamecheck,'Value') == 1
+        sqlquery = ['SELECT sequence.name, images.name FROM sequence, images WHERE (sequence.sequenceID = images.sequenceID_fk AND images.imageID IN(', strjoin(cellstr(num2str(cell2mat(imgidlist))),','),')) ORDER BY images.imageID DESC'];
+        curs1=exec(conn, sqlquery);
+        curs1=fetch(curs1);
+        db = curs1.Data;
+        close(curs1);
+        db = strcat(db(:,1),{': '},db(:,2));
+    else
+        sqlquery = ['SELECT name FROM images WHERE imageID IN (', strjoin(cellstr(num2str(cell2mat(imgidlist))),','),') ORDER BY imageID DESC'];
+        curs1=exec(conn, sqlquery);
+        curs1=fetch(curs1);
+        db = curs1.Data;
+        close(curs1);
+    end
+    
     if ~isempty(anaimgidlist)
         for i = 1:length(db)
             if any(cell2mat(imgidlist(i))==cell2mat(anaimgidlist))
                 db(i) = strcat('*',db(i));
             end
         end
-    end
-    if get(shownamecheck,'Value') == 1
-        %SeqID
-        sqlquery = ['SELECT sequenceID_fk FROM images WHERE imageID IN (', strjoin(cellstr(num2str(cell2mat(imgidlist))),','),') ORDER BY imageID DESC'];
-        curs1=exec(conn, sqlquery);
-        curs1=fetch(curs1);
-        seqIDlist = curs1.Data;
-        close(curs1);
-        
-        for i = 1:length(db)
-            %SeqName
-            sqlquery=['SELECT name FROM sequence WHERE sequenceID =', num2str(cell2mat(seqIDlist(i)))];
-            curs1=exec(conn, sqlquery);
-            curs1=fetch(curs1);
-            info2 = curs1.Data;
-            close(curs1);
-            db(i) = strcat(info2,{' '},db(i));
-        end
-%         db = strcat(info2,{' '},db);
-        
-%         for i = 1:length(db)
-%             %SeqID
-%             sqlquery=['SELECT sequenceID_fk FROM images WHERE imageID =', num2str(cell2mat(imgidlist(i)))];
-%             curs1=exec(conn, sqlquery);
-%             curs1=fetch(curs1);
-%             seqID = curs1.Data;
-%             close(curs1);
-%             %SeqName
-%             sqlquery=['SELECT name FROM sequence WHERE sequenceID =', num2str(cell2mat(seqID))];
-%             curs1=exec(conn, sqlquery);
-%             curs1=fetch(curs1);
-%             info2 = curs1.Data;
-%             close(curs1);
-%             db(i) = strcat(info2, {' '}, db(i));
-%         end
     end
     set(dblist, 'string', db);
 end
