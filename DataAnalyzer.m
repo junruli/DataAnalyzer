@@ -974,9 +974,37 @@ function singlefit_click(~, ~)
     
     output_num=int32(str2double(get(fitoutputnum, 'String')));
     resulty=resy(:,output_num)';
-
-    resx=xvardet(1);    %Determines value/array of x variable for fit plot
-
+    % X Variable for selected imageID 
+    xvarmodesel=get(xvarmode, 'SelectedObject');
+    xvarmodevalue=xvarmodesel.Tag;
+    resx=zeros(1);
+    if xvarmodevalue == '1'
+        resx=1;
+    elseif xvarmodevalue == '2'
+        filenames=get(analysisdblist, 'String');
+        i_sel=get(analysisdblist, 'Value');
+        name=filenames{i_sel};
+        splitfilename=strsplit(name);
+        b=cellfun(@str2double,splitfilename(:),'un',0).';
+        v=int32(str2double(xvar));
+        na=cell2mat(b(min(v,length(b))));
+        if isnan(na)
+            na = 0;
+        end
+        resx=na;
+    elseif xvarmodevalue == '3'
+        i_sel=get(analysisdblist, 'Value');
+        imgid=cell2mat(anaimgidlist(i_sel));
+        var_names=get(xvardropmenu,'String');
+        var_value=get(xvardropmenu,'Value');
+        var=var_names{var_value};            
+        sqlquery3=['SELECT ',var,' FROM ciceroout WHERE runID = (SELECT runID_fk FROM images WHERE imageID = ', num2str(imgid), ')'];
+        curs3=exec(conn, sqlquery3);
+        curs3=fetch(curs3);
+        resx=cell2mat(curs3.Data);
+        close(curs3);
+    end
+    
     showdata=sprintf('\n%s %s', num2str(resx), num2str(resulty));
     set(fitres,'String',{'Results:';['Data: ' showdata]});
 end
@@ -1008,19 +1036,12 @@ function resx = xvardet(n)
         %From DB (currently it only gets variable from ciceroout, need case statement to include all tables)
         for i=1:n
             imgid=cell2mat(anaimgidlist(i));
-            sqlquery2=['SELECT runID_fk FROM images WHERE imageID = ', num2str(imgid)]; %Maybe later put different functions for getting different IDs quickly
-            curs2=exec(conn, sqlquery2);
-            curs2=fetch(curs2);
-            runID2=curs2.Data;
-            close(curs2);
             var_names=get(xvardropmenu,'String');
             var_value=get(xvardropmenu,'Value');
             var=var_names{var_value};            
-            runID=cell2mat(runID2);
-            sqlquery3=['SELECT ',var,' FROM ciceroout WHERE runID = ', num2str(runID)];
+            sqlquery3=['SELECT ',var,' FROM ciceroout WHERE runID = (SELECT runID_fk FROM images WHERE imageID = ', num2str(imgid), ')'];
             curs3=exec(conn, sqlquery3);
             curs3=fetch(curs3);
-%             a=curs3.Data;
             resx(i)=cell2mat(curs3.Data);
             close(curs3);
         end
