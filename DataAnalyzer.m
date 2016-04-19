@@ -82,10 +82,14 @@ img = axes('Units','pixels','Position',[50,330,750,600]);  %Main image from data
 
 % Quick update for data in img
 <<<<<<< HEAD
+<<<<<<< HEAD
 updatebut = uicontrol('Style','pushbutton','String','Update [F5]','Position',[855,550,70,25], 'Callback', @update_but); %Fit files selected from dblist into fitplt
 =======
 updatebut = uicontrol('Style','pushbutton','String','Update','Position',[820,550,70,25], 'Callback', @update_but); %Fit files selected from dblist into fitplt
 >>>>>>> refs/remotes/origin/cody-dev
+=======
+updatebut = uicontrol('Style','pushbutton','String','Update [F5]','Position',[820,550,70,25], 'Callback', @update_but); %Fit files selected from dblist into fitplt
+>>>>>>> origin/master
 quickres = uicontrol('Style','edit','String','Quick Results','min', 0, 'max', 100, 'Position',[820,380,150,150]); %Quick results for img
 autoupbox = uicontrol('Style','checkbox','String','Auto Update','Position',[895,552,120,20], 'Value', 0); %Update the quick results after changing the image.
 
