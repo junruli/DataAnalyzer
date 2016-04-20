@@ -54,7 +54,7 @@ function DataAnalyzer
 
 
 %  Create UI 
-f = figure('Name', 'Data Analysis Software','Visible','on','Position',[50,50,1600,950]);
+f = figure('Name', 'Data Analysis Software','Visible','on','Position',[50,50,1600,950],'WindowKeyPressFcn',@globalShortcuts);
 
 [zoom_icon,pan_icon,curs_icon,rotate_icon]=icon_update();
 
@@ -117,7 +117,7 @@ nextimgname = uicontrol('Style','edit','Position',[440,20,160,25],'KeyPressFcn',
 imgid_text = uicontrol('Style','text','String','Image ID:','Position',[590,275,70,25]);
 imgidbox = uicontrol('Style','edit','String','Image ID','Position',[650,280,170,25]); %Display imageID of selected image in dblist
 imgname_text = uicontrol('Style','text','String','Image Name:','Position',[580,230,70,25]);
-imgname = uicontrol('Style','edit','String','Image Name','Position',[650,235,170,25], 'Callback', @rename_imgname); %Rename selected image in dblist
+imgname = uicontrol('Style','edit','String','Image Name','Position',[650,235,170,25], 'Callback', @rename_imgname, 'KeyPressFcn', @imgname_enter); %Rename selected image in dblist
 timestmp_text = uicontrol('Style','text','String','Timestamp:','Position',[580,185,70,25]);
 timestmpstatus = uicontrol('Style','edit','String','Timestamp','Position',[650,190,170,25]); %Displays timestamp of selected image in dblist
 savestatus_text = uicontrol('Style','text','String','Saved:','Position',[590,140,37,25]);
