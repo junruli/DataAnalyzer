@@ -1136,4 +1136,24 @@ function nextimgname_enter(~, eventdata)
     end
 end
 
+%% To update string of imgname edit box on pressing enter 
+function imgname_enter(~, eventdata)
+    k=eventdata.Key;
+    if strcmp(k,'return')
+        uicontrol(imgname_text);        %Changes focus to other object than edit textbox to update imgname string
+    end
+end
+
+%% To maneuver with keyboard shortcuts
+function globalShortcuts(source, eventdata)
+    k=eventdata.Key;
+    if strcmp(k,'f5')
+        update_but(source,eventdata);
+    elseif strcmp(k,'f9')
+        fit_click(source,eventdata);
+    elseif strcmp(k,'insert')
+        uicontrol(nextimgname);
+    end
+end
+
 end
