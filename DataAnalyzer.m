@@ -1105,7 +1105,7 @@ function deltemp_click(~, ~)
     choice=questdlg('Are you sure you want to delete temporary images?', 'ATTENTION', 'Yes!', 'No', 'No');
     switch choice
         case 'Yes'
-            sqlquery2='DELETE * FROM images WHERE type="temp"';
+            sqlquery2='DELETE FROM images WHERE type="temp"';
             curs2=exec(conn, sqlquery2);
             close(curs2);
     end            
