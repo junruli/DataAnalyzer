@@ -79,8 +79,10 @@ rotangle='0';
 img = axes('Units','pixels','Position',[50,330,750,600]);  %Main image from database
 
 % Quick update for data in img
-updatebut = uicontrol('Style','pushbutton','String','Update','Position',[855,550,70,25], 'Callback', @update_but); %Fit files selected from dblist into fitplt
+updatebut = uicontrol('Style','pushbutton','String','Update [F5]','Position',[820,550,70,25], 'Callback', @update_but); %Fit files selected from dblist into fitplt
 quickres = uicontrol('Style','edit','String','Quick Results','min', 0, 'max', 100, 'Position',[820,380,150,150]); %Quick results for img
+autoupbox = uicontrol('Style','checkbox','String','Auto Update','Position',[895,552,120,20], 'Value', 0); %Update the quick results after changing the image.
+
 
 % Mode of image in img
 framelist = uicontrol('Style','listbox', 'min' , 0, 'max' , 1, 'Position', [820, 690, 150,100], 'String', {'Absorption Image','Probe with Atoms','Probe without Atoms','Dark Field','Dark Field (Dual DF)'}, 'Callback', @framelist_click); %List of frames
@@ -107,7 +109,12 @@ savebut = uicontrol('Style','pushbutton','String','Save','Position',[440,155,70,
 loadbut = uicontrol('Style','pushbutton','String','Load','Position',[440,210,70,25], 'Callback', @load_click); %Load data manually (from permanenet database)
 delbut = uicontrol('Style','pushbutton','String','Delete','Position',[440,100,70,25], 'Callback', @del_click); %Delete data from dblist
 add2anabut = uicontrol('Style','pushbutton','String','Add2Analysis','Position',[440,265,70,25], 'Callback', @add2ana_click); %Add files selected in dblist to analysisdblist
+<<<<<<< HEAD
 nextimgname_text = uicontrol('Style','text','String','Next Image Name:','Position',[440,45,90,15]);
+=======
+addnext = uicontrol('Style','checkbox','String','Add Next','Position',[440,240,120,20], 'Value', 0); %Add the next shot to analysisdblist
+nextimgname_text = uicontrol('Style','text','String','Next Image Name: [Ins]','Position',[440,45,120,15]);
+>>>>>>> refs/remotes/origin/master
 nextimgname = uicontrol('Style','edit','Position',[440,20,160,25],'KeyPressFcn', @nextimgname_enter); %Next shot name
 
 %Status boxes for dblist
@@ -123,6 +130,7 @@ seqidstatus_text = uicontrol('Style','text','String','Sequence ID:','Position',[
 seqidstatus = uicontrol('Style','edit','String','ID','Position',[770,145,50,25]); %Displays seq ID of selected image in dblist
 seqnamestatus_text = uicontrol('Style','text','String','Sequence Name:','Position',[550,95,90,25]);
 seqnamestatus = uicontrol('Style','edit','String','Sequence Name','Position',[650,100,170,25]); %Displays seq name of selected image in dblist
+shownamecheck = uicontrol('Style','checkbox','String','Show in list','Position',[690,80,120,20], 'Value', 0); %Show the sequence name in dblist
 seqdescstatus_text = uicontrol('Style','text','String','Sequence Description:','Position',[610,40,70,35]);
 seqdescstatus = uicontrol('Style','edit','min',0,'max',10,'String','Sequence Description','Position',[680,20,140,60]); %Displays seq description of selected image in dblist
 
@@ -249,6 +257,9 @@ yvarincrement.Units = 'normalized';
 yvardecrement.Units = 'normalized';
 rotincrement.Units = 'normalized';
 rotdecrement.Units = 'normalized';
+autoupbox.Units = 'normalized';
+addnext.Units = 'normalized';
+shownamecheck.Units = 'normalized';
 
 
 %% Initialize the UI
@@ -332,6 +343,10 @@ function updateimgidlist()
         showimg(currentimgid);
         [y,Fs] = audioread('sound.wav');
         sound(y,Fs);
+        if get(addnext,'Value') == 1
+            anaimgidlist=[anaimgidlist; currentimgid];
+            updateanalysisdblist();
+        end
     end
     close(curs1);
 end    
@@ -361,11 +376,21 @@ end
 %% Updates database list
 function updatedblist()
     % Sql code for getting name of images
-    sqlquery = ['SELECT name FROM images WHERE imageID IN (', strjoin(cellstr(num2str(cell2mat(imgidlist))),','),') ORDER BY imageID DESC'];
-    curs1=exec(conn, sqlquery);
-    curs1=fetch(curs1);
-    db = curs1.Data;
-    close(curs1);
+    if get(shownamecheck,'Value') == 1
+        sqlquery = ['SELECT sequence.name, images.name FROM sequence, images WHERE (sequence.sequenceID = images.sequenceID_fk AND images.imageID IN(', strjoin(cellstr(num2str(cell2mat(imgidlist))),','),')) ORDER BY images.imageID DESC'];
+        curs1=exec(conn, sqlquery);
+        curs1=fetch(curs1);
+        db = curs1.Data;
+        close(curs1);
+        db = strcat(db(:,1),{': '},db(:,2));
+    else
+        sqlquery = ['SELECT name FROM images WHERE imageID IN (', strjoin(cellstr(num2str(cell2mat(imgidlist))),','),') ORDER BY imageID DESC'];
+        curs1=exec(conn, sqlquery);
+        curs1=fetch(curs1);
+        db = curs1.Data;
+        close(curs1);
+    end
+    
     if ~isempty(anaimgidlist)
         for i = 1:length(db)
             if any(cell2mat(imgidlist(i))==cell2mat(anaimgidlist))
@@ -506,6 +531,10 @@ function showimg(filenum)
         [~] = colorbar(img,'XTickLabel',{num2str(min(r(:))) num2str(max(r(:)))},'XTick', [min(r(:)) max(r(:))]);
     end    
     curs_update();
+    
+    if get(autoupbox,'Value') == 1
+        update_but(0,0);
+    end
 end
 
 %% Gets the requested image from the database.
@@ -920,9 +949,37 @@ function singlefit_click(~, ~)
     
     output_num=int32(str2double(get(fitoutputnum, 'String')));
     resulty=resy(:,output_num)';
-
-    resx=xvardet(1);    %Determines value/array of x variable for fit plot
-
+    % X Variable for selected imageID 
+    xvarmodesel=get(xvarmode, 'SelectedObject');
+    xvarmodevalue=xvarmodesel.Tag;
+    resx=zeros(1);
+    if xvarmodevalue == '1'
+        resx=1;
+    elseif xvarmodevalue == '2'
+        filenames=get(analysisdblist, 'String');
+        i_sel=get(analysisdblist, 'Value');
+        name=filenames{i_sel};
+        splitfilename=strsplit(name);
+        b=cellfun(@str2double,splitfilename(:),'un',0).';
+        v=int32(str2double(xvar));
+        na=cell2mat(b(min(v,length(b))));
+        if isnan(na)
+            na = 0;
+        end
+        resx=na;
+    elseif xvarmodevalue == '3'
+        i_sel=get(analysisdblist, 'Value');
+        imgid=cell2mat(anaimgidlist(i_sel));
+        var_names=get(xvardropmenu,'String');
+        var_value=get(xvardropmenu,'Value');
+        var=var_names{var_value};            
+        sqlquery3=['SELECT ',var,' FROM ciceroout WHERE runID = (SELECT runID_fk FROM images WHERE imageID = ', num2str(imgid), ')'];
+        curs3=exec(conn, sqlquery3);
+        curs3=fetch(curs3);
+        resx=cell2mat(curs3.Data);
+        close(curs3);
+    end
+    
     showdata=sprintf('\n%s %s', num2str(resx), num2str(resulty));
     set(fitres,'String',{'Results:';['Data: ' showdata]});
 end
@@ -954,19 +1011,12 @@ function resx = xvardet(n)
         %From DB (currently it only gets variable from ciceroout, need case statement to include all tables)
         for i=1:n
             imgid=cell2mat(anaimgidlist(i));
-            sqlquery2=['SELECT runID_fk FROM images WHERE imageID = ', num2str(imgid)]; %Maybe later put different functions for getting different IDs quickly
-            curs2=exec(conn, sqlquery2);
-            curs2=fetch(curs2);
-            runID2=curs2.Data;
-            close(curs2);
             var_names=get(xvardropmenu,'String');
             var_value=get(xvardropmenu,'Value');
             var=var_names{var_value};            
-            runID=cell2mat(runID2);
-            sqlquery3=['SELECT ',var,' FROM ciceroout WHERE runID = ', num2str(runID)];
+            sqlquery3=['SELECT ',var,' FROM ciceroout WHERE runID = (SELECT runID_fk FROM images WHERE imageID = ', num2str(imgid), ')'];
             curs3=exec(conn, sqlquery3);
             curs3=fetch(curs3);
-%             a=curs3.Data;
             resx(i)=cell2mat(curs3.Data);
             close(curs3);
         end
