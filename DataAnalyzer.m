@@ -429,6 +429,8 @@ function dblist_keypress(source, eventdata)
     key = get(gcf,'CurrentKey');
     if(strcmp (key , 'delete'))
         del_click(source, eventdata);
+    elseif(strcmp (key , 'rightarrow'))
+        add2ana_click(source, eventdata);
     end
 end    
 
