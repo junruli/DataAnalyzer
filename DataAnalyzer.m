@@ -109,12 +109,8 @@ savebut = uicontrol('Style','pushbutton','String','Save','Position',[440,155,70,
 loadbut = uicontrol('Style','pushbutton','String','Load','Position',[440,210,70,25], 'Callback', @load_click); %Load data manually (from permanenet database)
 delbut = uicontrol('Style','pushbutton','String','Delete','Position',[440,100,70,25], 'Callback', @del_click); %Delete data from dblist
 add2anabut = uicontrol('Style','pushbutton','String','Add2Analysis','Position',[440,265,70,25], 'Callback', @add2ana_click); %Add files selected in dblist to analysisdblist
-<<<<<<< HEAD
-nextimgname_text = uicontrol('Style','text','String','Next Image Name:','Position',[440,45,90,15]);
-=======
 addnext = uicontrol('Style','checkbox','String','Add Next','Position',[440,240,120,20], 'Value', 0); %Add the next shot to analysisdblist
 nextimgname_text = uicontrol('Style','text','String','Next Image Name: [Ins]','Position',[440,45,120,15]);
->>>>>>> refs/remotes/origin/master
 nextimgname = uicontrol('Style','edit','Position',[440,20,160,25],'KeyPressFcn', @nextimgname_enter); %Next shot name
 
 %Status boxes for dblist
