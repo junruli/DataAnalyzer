@@ -134,7 +134,7 @@ fitplt = axes('Units','pixels','Position',[1050,480,500,450]);  %Fitting functio
 %singplt = axes('Units','pixels','Position',[1280,680,300,250]);  %Single data plot
 
 % Fit button and result
-fitbut = uicontrol('Style','pushbutton','String','Fit','Position',[1455,55,80,30], 'Callback', @fit_click); %Fit files selected from analysisdblist into fitplt
+fitbut = uicontrol('Style','pushbutton','String','Fit [F9]','Position',[1455,55,80,30], 'Callback', @fit_click); %Fit files selected from analysisdblist into fitplt
 singlefitbut = uicontrol('Style','pushbutton','String','Fit selected image','Position',[1450,20,100,25], 'Callback', @singlefit_click); %Fit single file selected from analysisdblist into fitplt
 cftoolbut = uicontrol('Style','pushbutton','String','CFTool','Position',[1240,260,80,25], 'Callback', @cftool_click); %Opens cftool with x & y data from results
 fitplotcheck = uicontrol('Style','checkbox','String','Plot fit for each shot','Position',[1320,60,120,20], 'Value', 0); %To check if each shot gives plot for fit
