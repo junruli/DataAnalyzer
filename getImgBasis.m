@@ -14,4 +14,10 @@ for i = 1:length(imageIDSpace)
     dataOut(i,:,:,:)=double(Blob2Matlab(blobdata,s));
 end
 
-save('ImgBasis','dataOut');
+pwa = squeeze(double(max(min(dataOut(:,:,:,1) - dataOut(:,:,:,3),65535),1)));
+pwoa = squeeze(double(max(min(dataOut(:,:,:,2) - dataOut(:,:,:,3),65535),1)));
+absNoPCA = max(min(pwa./pwoa,2),0.01);
+
+save('pwaSave','pwa');
+save('pwoaSave','pwoa');
+save('absSave','absNoPCA');
