@@ -359,6 +359,7 @@ end
 
 %% Update analysis database list
 function updateanalysisdblist()
+    anaimgidlist=num2cell(unique(cell2mat(anaimgidlist),'stable'));
     anaimgidlist=num2cell(sort(cell2mat(anaimgidlist), 'descend'));
     sqlquery = ['SELECT name FROM images WHERE imageID IN (', strjoin(cellstr(num2str(cell2mat(anaimgidlist))),','),') ORDER BY imageID DESC'];
     curs1=exec(conn, sqlquery);
@@ -570,6 +571,7 @@ function load_click(~, ~)
     a=cell2mat(newid);
     l=length(imgidlist);
     imgidlist(l+1)=num2cell(str2double(a));
+    imgidlist=num2cell(unique(cell2mat(imgidlist),'stable'));
     updatedblist();
 end
 
@@ -595,6 +597,12 @@ function del_click(~, ~)
     updatedblist();
     set(dblist, 'Value', 1);
     updatecurrentimginfo(currentimgid);
+    for i=1:length(anaimgidlist)        %Removes deleted id from anaimgidlist if it is there
+        if anaimgidlist{i} == cell2mat(id)
+            anaimgidlist(i)=[];
+        end
+    end
+    updateanalysisdblist();
 end    
 
 %% Function for renaming image in dblist
@@ -622,7 +630,6 @@ function analysisdblist_click(~, ~)
     sel=get(analysisdblist, 'Value');
     id=cell2mat(anaimgidlist(sel));
     set(analysisimgidbox,'String',num2str(id));
-
 end
 
 %% Call back function for pressing key in analysisdb list
