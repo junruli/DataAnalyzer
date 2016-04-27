@@ -10,7 +10,7 @@ start = 1;
 
 while start <= length(imageIDSpace)
     stop = min(start+batchSize,length(imageIDSpace));
-    sqlquery2=['SELECT data FROM images WHERE imageID IN (', strjoin(cellstr(strsplit(num2str(imageIDSpace(start:stop)))),','),') ORDER BY imageID DESC'];
+    sqlquery2=['SELECT data FROM images WHERE imageID IN (', strjoin(cellstr(strsplit(num2str(imageIDSpace(start:stop)))),','),') ORDER BY imageID ASC'];
     curs2=exec(conn, sqlquery2);
     curs2=fetch(curs2);
     bdata=curs2.Data;

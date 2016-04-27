@@ -60,6 +60,10 @@ f = figure('Name', 'Data Analysis Software','Visible','on','Position',[50,50,160
 
 % "Global" Variables
 numImages = 500; % the number of images viewable in the data analyzer
+pcaBasisSize = 20;
+pwoaList = zeros(pcaBasisSize,1024*1024); % Reshaped probe without atom images to form a basis for pca.
+eigenBasis = 0; % Eigenbasis found with PCA.
+oldestImgIndex = 1; % Points to the oldest image in pwoaList, which should be replaced first.
 
 col=1024;
 row=1024;
@@ -89,6 +93,9 @@ framelist = uicontrol('Style','listbox', 'min' , 0, 'max' , 1, 'Position', [820,
 hdwmode = uibuttongroup('Title','Imaging Mode','Units', 'pixels', 'Position',[820, 810, 100,100], 'SelectionChangedFcn', @hdwmode_change); 
 normmode = uicontrol('Parent', hdwmode, 'Style','radiobutton','String','Normal','Units', 'pixels','Position',[10,55,70,25]); %Normal mode of data acqui (3 frames)
 kinmode = uicontrol('Parent', hdwmode, 'Style','radiobutton','String','Kinetics','Units', 'pixels','Position',[10,20,70,25]); %Kinetics mode of data acqui (2 frames)
+
+% PCA
+pcacbox = uicontrol('Style','checkbox','String','PCA new images','Position',[920,800,100,20],'Value',0,'Callback',@pca_click);
 
 % Tool box for img
 zon = uicontrol('Style','togglebutton','CData', zoom_icon,'Position',[855,650,25,25], 'Callback', @zoom_on); %Zoom On for Img
@@ -256,6 +263,8 @@ rotdecrement.Units = 'normalized';
 autoupbox.Units = 'normalized';
 addnext.Units = 'normalized';
 shownamecheck.Units = 'normalized';
+pcabutton.Units = 'normalized';
+pcacbox.Units = 'normalized';
 
 
 %% Initialize the UI
@@ -268,6 +277,8 @@ updatefittypelist();
 updatefitlist();
 updatexvardropmenu();
 
+%% Initialize Analysis
+loadPCABasis();
 
 
 
@@ -356,6 +367,31 @@ function updatefitlist()
     set(fitlist, 'string', funcns);
 end
 
+
+%% Loads 'pwoaSave.mat' to create the starting basis for PCA.
+% Assumes that pwoSave is sorted by imageId ascending. I.E. That
+% pwoaSave(1) is the oldest image.
+function loadPCABasis()
+    try 
+        pwoa = 0;
+        load('pwoaSave','pwoa');
+        savedSize = size(pwoa,1);
+        tempList = reshape(pwoa,savedSize,1024*1024);
+        pwoaList = tempList(max(savedSize-pcaBasisSize+1,1):savedSize,:);
+    catch
+        warning('No PCA basis found. Starting with 0.');
+    end
+    eigenBasis = makeEigenBasis(pwoaList);
+end
+
+%% Makes an eigenbasis of the images in the argument.
+function [eigenOut] = makeEigenBasis(imageList)
+    if size(imageList,1) < 2
+        eigenOut = zeros(1024*1024,1);
+    else
+        eigenOut = pca(pwoaList);
+    end
+end
 
 %% Update analysis database list
 function updateanalysisdblist()
@@ -493,6 +529,11 @@ function framelist_click(~, ~)
     showimg(currentimgid);    
 end
 
+%% Call back function for clicking PCA checkbox
+function pca_click(~, ~)
+    showimg(currentimgid);    
+end
+
 %% Call back function for change in capture mode 'hdwmode'
 function hdwmode_change (~, ~)
     showimg(currentimgid);
@@ -509,13 +550,44 @@ function showimg(filenum)
     hdwmodesel=get(hdwmode, 'SelectedObject');
     framenum=get(framelist, 'Value');
     imgmode=hdwmodesel.Value;
-    r = getImage(imgid,imgmode,framenum);
-%    axes(img);
+    
+%     
+%         sqlquery2=['SELECT data, cameraID_fk FROM images WHERE imageID = ', num2str(imgid)];
+%     curs2=exec(conn, sqlquery2);
+%     curs2=fetch(curs2);
+%     bdata=curs2.Data;
+%     close(curs2);
+%     blobdata=typecast(cell2mat(bdata(1)),'int16');
+%     sqlquery3=['SELECT cameraHeight, cameraWidth, Depth FROM cameras WHERE cameraID = ', num2str(cell2mat(bdata(2)))];
+%     curs3=exec(conn, sqlquery3);
+%     curs3=fetch(curs3);
+%     camdata=curs3.Data;
+%     close(curs3);
+%     camdata=cell2mat(camdata);
+%     s=[camdata(1),camdata(2),camdata(3)];            
+%     a=Blob2Matlab(blobdata,s);
+    
+     
+    if get(pcacbox,'Value') % PCA is checked
+%         if column == NULL
+            newPWOA = getImage(imgid,1,3);
+            newPWA = getImage(imgid,1,2);
+            newDark = getImage(imgid,1,4);
+            
+            newPWA = double(max(min(newPWA - newDark,65535),1));
+            newPWOA = double(max(min(newPWOA - newDark,65535),1));
+            
+            addToBasis(newPWOA);
+            r = doPCA(newPWA);
+%         else
+%             %old pca stuff
+%         end
+    else
+        r = getImage(imgid,imgmode,framenum);
+    end
+    
     cla(img);
     [~]= imagesc(r, 'Parent', img);
-%    set(img, 'CData', r);
-%    [col, row] = size(r);
-%    axis(img, [1 col 1 row]);
     if get(colormapname,'Value') == 1
         load('MyColormaps','mycmap')
         colormap(img, mycmap);
@@ -528,12 +600,34 @@ function showimg(filenum)
     else
         caxis(img, [min(r(:)) max(r(:))]);
         [~] = colorbar(img,'XTickLabel',{num2str(min(r(:))) num2str(max(r(:)))},'XTick', [min(r(:)) max(r(:))]);
-    end    
+    end
+
     curs_update();
     
     if get(autoupbox,'Value') == 1
         update_but(0,0);
     end
+end
+
+%% Performs PCA on the selected PWA image using the global eigenBasis.
+function [imgOut] = doPCA(imgIn)
+    
+    toImg = reshape(imgIn,1024*1024,1);
+    meanImg = mean(pwoaList,1)';
+
+    c = (toImg-meanImg)'*eigenBasis;
+    estPWOA = (eigenBasis*c'+meanImg);
+        
+    imgOut = reshape(toImg./estPWOA,1024,1024);
+
+end
+
+%% Adds a new 1024*1024 image to the PCA basis and updates the eigenbasis.
+function addToBasis(newImg)
+    X = reshape(newImg,1,1024*1024);
+    pwoaList(oldestImgIndex,:) = X;
+    oldestImgIndex = mod(oldestImgIndex, pcaBasisSize) + 1;
+    eigenBasis = makeEigenBasis(pwoaList);
 end
 
 %% Gets the requested image from the database.
