@@ -263,7 +263,6 @@ rotdecrement.Units = 'normalized';
 autoupbox.Units = 'normalized';
 addnext.Units = 'normalized';
 shownamecheck.Units = 'normalized';
-pcabutton.Units = 'normalized';
 pcacbox.Units = 'normalized';
 
 
@@ -551,25 +550,14 @@ function showimg(filenum)
     framenum=get(framelist, 'Value');
     imgmode=hdwmodesel.Value;
     
-%     
-%         sqlquery2=['SELECT data, cameraID_fk FROM images WHERE imageID = ', num2str(imgid)];
-%     curs2=exec(conn, sqlquery2);
-%     curs2=fetch(curs2);
-%     bdata=curs2.Data;
-%     close(curs2);
-%     blobdata=typecast(cell2mat(bdata(1)),'int16');
-%     sqlquery3=['SELECT cameraHeight, cameraWidth, Depth FROM cameras WHERE cameraID = ', num2str(cell2mat(bdata(2)))];
-%     curs3=exec(conn, sqlquery3);
-%     curs3=fetch(curs3);
-%     camdata=curs3.Data;
-%     close(curs3);
-%     camdata=cell2mat(camdata);
-%     s=[camdata(1),camdata(2),camdata(3)];            
-%     a=Blob2Matlab(blobdata,s);
-    
-     
     if get(pcacbox,'Value') % PCA is checked
-%         if column == NULL
+        sqlquery2=['SELECT pcadata FROM images WHERE imageID = ', num2str(imgid)];
+        curs2=exec(conn, sqlquery2);
+        curs2=fetch(curs2);
+        bdata=curs2.Data;
+        close(curs2);
+        
+        if strcmp('null',cell2mat(bdata)) % We haven't done PCA on this image yet.
             newPWOA = getImage(imgid,1,3);
             newPWA = getImage(imgid,1,2);
             newDark = getImage(imgid,1,4);
@@ -579,9 +567,24 @@ function showimg(filenum)
             
             addToBasis(newPWOA);
             r = doPCA(newPWA);
-%         else
-%             %old pca stuff
-%         end
+            
+            tableName = 'images';
+            colName = {'pcadata'};
+            data = {typecast(reshape(r,1,1024*1024),'int8')};
+            whereClause = ['WHERE imageID = ', num2str(imgid)];
+            update(conn,tableName,colName,data,whereClause);
+
+        else
+            sqlquery2=['SELECT pcadata FROM images WHERE imageID = ', num2str(imgid)];
+            curs2=exec(conn, sqlquery2);
+            curs2=fetch(curs2);
+            bdata=curs2.Data;
+            close(curs2);
+            blobdata=typecast(cell2mat(bdata),'double');
+            s=[1024 1024];
+            r=Blob2Matlab(blobdata,s);
+        end
+        
     else
         r = getImage(imgid,imgmode,framenum);
     end
