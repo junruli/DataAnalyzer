@@ -60,8 +60,8 @@ f = figure('Name', 'Data Analysis Software','Visible','on','Position',[50,50,160
 
 % "Global" Variables
 numImages = 500; % the number of images viewable in the data analyzer
-pcaBasisSize = 20;
-pwoaList = zeros(pcaBasisSize,1024*1024); % Reshaped probe without atom images to form a basis for pca.
+pcaBasisSize = 50;
+pwoa = zeros(pcaBasisSize,1024*1024); % Reshaped probe without atom images to form a basis for pca.
 eigenBasis = 0; % Eigenbasis found with PCA.
 oldestImgIndex = 1; % Points to the oldest image in pwoaList, which should be replaced first.
 
@@ -269,6 +269,7 @@ pcacbox.Units = 'normalized';
 %% Initialize the UI
 f.ToolBar = 'None'; %Hide the main toobar in GUI
 f.MenuBar = 'None'; % Hide menu bar in GUI
+f.CloseRequestFcn = @onClose;
 zoom_img=zoom(img);
 zoom_img.Enable = 'off';
 % dbh=NET.Assembly('DatabaseHelper.dll');
@@ -376,11 +377,17 @@ function loadPCABasis()
         load('pwoaSave','pwoa');
         savedSize = size(pwoa,1);
         tempList = reshape(pwoa,savedSize,1024*1024);
-        pwoaList = tempList(max(savedSize-pcaBasisSize+1,1):savedSize,:);
+        pwoa = tempList(max(savedSize-pcaBasisSize+1,1):savedSize,:);
     catch
         warning('No PCA basis found. Starting with 0.');
     end
-    eigenBasis = makeEigenBasis(pwoaList);
+    try
+        load('oldestImgSave','oldestImgIndex');
+    catch
+        warning('No oldestImgSave.m found. Starting with 1');
+    end
+    
+    eigenBasis = makeEigenBasis(pwoa);
 end
 
 %% Makes an eigenbasis of the images in the argument.
@@ -388,7 +395,7 @@ function [eigenOut] = makeEigenBasis(imageList)
     if size(imageList,1) < 2
         eigenOut = zeros(1024*1024,1);
     else
-        eigenOut = pca(pwoaList);
+        eigenOut = pca(pwoa);
     end
 end
 
@@ -616,7 +623,7 @@ end
 function [imgOut] = doPCA(imgIn)
     
     toImg = reshape(imgIn,1024*1024,1);
-    meanImg = mean(pwoaList,1)';
+    meanImg = mean(pwoa,1)';
 
     c = (toImg-meanImg)'*eigenBasis;
     estPWOA = (eigenBasis*c'+meanImg);
@@ -628,9 +635,9 @@ end
 %% Adds a new 1024*1024 image to the PCA basis and updates the eigenbasis.
 function addToBasis(newImg)
     X = reshape(newImg,1,1024*1024);
-    pwoaList(oldestImgIndex,:) = X;
+    pwoa(oldestImgIndex,:) = X;
     oldestImgIndex = mod(oldestImgIndex, pcaBasisSize) + 1;
-    eigenBasis = makeEigenBasis(pwoaList);
+    eigenBasis = makeEigenBasis(pwoa);
 end
 
 %% Gets the requested image from the database.
@@ -1260,6 +1267,13 @@ function globalShortcuts(source, eventdata)
     elseif strcmp(k,'insert')
         uicontrol(nextimgname);
     end
+end
+
+%% On close, save settings.
+function onClose(~, ~)
+    save('pwoaSave','pwoa');
+    save('oldestImgSave','oldestImgIndex');
+    delete(f);
 end
 
 end

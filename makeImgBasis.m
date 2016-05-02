@@ -28,9 +28,9 @@ pwa = squeeze(double(max(min(dataOut(:,:,:,1) - dataOut(:,:,:,3),65535),1)));
 pwoa = squeeze(double(max(min(dataOut(:,:,:,2) - dataOut(:,:,:,3),65535),1)));
 absNoPCA = max(min(pwa./pwoa,2),0.01);
 
-save('pwaSave','pwa');
+% save('pwaSave','pwa');
 save('pwoaSave','pwoa');
-save('absSave','absNoPCA');
+% save('absSave','absNoPCA');
 
 end
 
