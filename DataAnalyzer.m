@@ -60,6 +60,10 @@ f = figure('Name', 'Data Analysis Software','Visible','on','Position',[50,50,160
 
 % "Global" Variables
 numImages = 500; % the number of images viewable in the data analyzer
+pcaBasisSize = 50;
+pwoa = zeros(pcaBasisSize,1024*1024); % Reshaped probe without atom images to form a basis for pca.
+eigenBasis = 0; % Eigenbasis found with PCA.
+oldestImgIndex = 1; % Points to the oldest image in pwoaList, which should be replaced first.
 
 col=1024;
 row=1024;
@@ -89,6 +93,9 @@ framelist = uicontrol('Style','listbox', 'min' , 0, 'max' , 1, 'Position', [820,
 hdwmode = uibuttongroup('Title','Imaging Mode','Units', 'pixels', 'Position',[820, 810, 100,100], 'SelectionChangedFcn', @hdwmode_change); 
 normmode = uicontrol('Parent', hdwmode, 'Style','radiobutton','String','Normal','Units', 'pixels','Position',[10,55,70,25]); %Normal mode of data acqui (3 frames)
 kinmode = uicontrol('Parent', hdwmode, 'Style','radiobutton','String','Kinetics','Units', 'pixels','Position',[10,20,70,25]); %Kinetics mode of data acqui (2 frames)
+
+% PCA
+pcacbox = uicontrol('Style','checkbox','String','Apply PCA','Position',[930,850,100,20],'Value',0,'Callback',@pca_click);
 
 % Tool box for img
 zon = uicontrol('Style','togglebutton','CData', zoom_icon,'Position',[855,650,25,25], 'Callback', @zoom_on); %Zoom On for Img
@@ -256,11 +263,13 @@ rotdecrement.Units = 'normalized';
 autoupbox.Units = 'normalized';
 addnext.Units = 'normalized';
 shownamecheck.Units = 'normalized';
+pcacbox.Units = 'normalized';
 
 
 %% Initialize the UI
 f.ToolBar = 'None'; %Hide the main toobar in GUI
 f.MenuBar = 'None'; % Hide menu bar in GUI
+f.CloseRequestFcn = @onClose;
 zoom_img=zoom(img);
 zoom_img.Enable = 'off';
 % dbh=NET.Assembly('DatabaseHelper.dll');
@@ -268,6 +277,8 @@ updatefittypelist();
 updatefitlist();
 updatexvardropmenu();
 
+%% Initialize Analysis
+loadPCABasis();
 
 
 
@@ -356,6 +367,37 @@ function updatefitlist()
     set(fitlist, 'string', funcns);
 end
 
+
+%% Loads 'pwoaSave.mat' to create the starting basis for PCA.
+% Assumes that pwoSave is sorted by imageId ascending. I.E. That
+% pwoaSave(1) is the oldest image.
+function loadPCABasis()
+    try 
+        pwoa = 0;
+        load('pwoaSave','pwoa');
+        savedSize = size(pwoa,1);
+        tempList = reshape(pwoa,savedSize,1024*1024);
+        pwoa = tempList(max(savedSize-pcaBasisSize+1,1):savedSize,:);
+    catch
+        warning('No PCA basis found. Starting with 0.');
+    end
+    try
+        load('oldestImgSave','oldestImgIndex');
+    catch
+        warning('No oldestImgSave.m found. Starting with 1');
+    end
+    
+    eigenBasis = makeEigenBasis(pwoa);
+end
+
+%% Makes an eigenbasis of the images in the argument.
+function [eigenOut] = makeEigenBasis(imageList)
+    if size(imageList,1) < 2
+        eigenOut = zeros(1024*1024,1);
+    else
+        eigenOut = pca(pwoa);
+    end
+end
 
 %% Update analysis database list
 function updateanalysisdblist()
@@ -493,6 +535,11 @@ function framelist_click(~, ~)
     showimg(currentimgid);    
 end
 
+%% Call back function for clicking PCA checkbox
+function pca_click(~, ~)
+    showimg(currentimgid);    
+end
+
 %% Call back function for change in capture mode 'hdwmode'
 function hdwmode_change (~, ~)
     showimg(currentimgid);
@@ -509,13 +556,10 @@ function showimg(filenum)
     hdwmodesel=get(hdwmode, 'SelectedObject');
     framenum=get(framelist, 'Value');
     imgmode=hdwmodesel.Value;
+        
     r = getImage(imgid,imgmode,framenum);
-%    axes(img);
     cla(img);
     [~]= imagesc(r, 'Parent', img);
-%    set(img, 'CData', r);
-%    [col, row] = size(r);
-%    axis(img, [1 col 1 row]);
     if get(colormapname,'Value') == 1
         load('MyColormaps','mycmap')
         colormap(img, mycmap);
@@ -528,7 +572,8 @@ function showimg(filenum)
     else
         caxis(img, [min(r(:)) max(r(:))]);
         [~] = colorbar(img,'XTickLabel',{num2str(min(r(:))) num2str(max(r(:)))},'XTick', [min(r(:)) max(r(:))]);
-    end    
+    end
+
     curs_update();
     
     if get(autoupbox,'Value') == 1
@@ -536,33 +581,111 @@ function showimg(filenum)
     end
 end
 
-%% Gets the requested image from the database.
-function [r] = getImage(imgid,imgmode,framenum)
-    sqlquery2=['SELECT data, cameraID_fk FROM images WHERE imageID = ', num2str(imgid)];
-    curs2=exec(conn, sqlquery2);
-    curs2=fetch(curs2);
-    bdata=curs2.Data;
-    close(curs2);
-    blobdata=typecast(cell2mat(bdata(1)),'int16');
-    sqlquery3=['SELECT cameraHeight, cameraWidth, Depth FROM cameras WHERE cameraID = ', num2str(cell2mat(bdata(2)))];
-    curs3=exec(conn, sqlquery3);
-    curs3=fetch(curs3);
-    camdata=curs3.Data;
-    close(curs3);
-    camdata=cell2mat(camdata);
-    s=[camdata(1),camdata(2),camdata(3)];            
-    a=Blob2Matlab(blobdata,s);
+%% Performs PCA on the selected PWA image using the global eigenBasis.
+function [imgOut] = doPCA(imgIn)
     
-    r=data_det(a,imgmode, framenum);
+    toImg = reshape(imgIn,1024*1024,1);
+    meanImg = mean(pwoa,1)';
+
+    c = (toImg-meanImg)'*eigenBasis;
+    estPWOA = (eigenBasis*c'+meanImg);
+        
+    imgOut = reshape(toImg./estPWOA,1024,1024);
+
 end
 
-%% To determine which kind of file it is and process it
-function [r] = data_det(a, imgmode, framenum)
-    r = data_evaluation(a, imgmode,framenum);
+%% Adds a new 1024*1024 image to the PCA basis and updates the eigenbasis.
+function addToBasis(newImg)
+    X = reshape(newImg,1,1024*1024);
+    pwoa(oldestImgIndex,:) = X;
+    oldestImgIndex = mod(oldestImgIndex, pcaBasisSize) + 1;
+    eigenBasis = makeEigenBasis(pwoa);
+end
+
+%% Gets the requested image from the database.
+function [r] = getImage(imgid,imgmode,framenum)
+    if (get(pcacbox,'Value') && framenum == 1) % PCA is checked and we want the absorption image
+        sqlquery2=['SELECT pcadata FROM images WHERE imageID = ', num2str(imgid)];
+        curs2=exec(conn, sqlquery2);
+        curs2=fetch(curs2);
+        bdata=curs2.Data;
+        close(curs2);
+        
+        if strcmp('null',cell2mat(bdata)) % We haven't done PCA on this image yet.
+            
+            sqlquery2=['SELECT data, cameraID_fk FROM images WHERE imageID = ', num2str(imgid)];
+            curs2=exec(conn, sqlquery2);
+            curs2=fetch(curs2);
+            bdata=curs2.Data;
+            close(curs2);
+            blobdata=typecast(cell2mat(bdata(1)),'int16');
+            sqlquery3=['SELECT cameraHeight, cameraWidth, Depth FROM cameras WHERE cameraID = ', num2str(cell2mat(bdata(2)))];
+            curs3=exec(conn, sqlquery3);
+            curs3=fetch(curs3);
+            camdata=curs3.Data;
+            close(curs3);
+            camdata=cell2mat(camdata);
+            s=[camdata(1),camdata(2),camdata(3)];            
+            a=Blob2Matlab(blobdata,s);
+
+            newPWOA = data_evaluation(a, 1, 3);
+            newPWA = data_evaluation(a, 1, 2);
+            newDark = data_evaluation(a, 1, 4);
+            
+            newPWA = double(max(min(newPWA - newDark,65535),1));
+            newPWOA = double(max(min(newPWOA - newDark,65535),1));
+            
+            addToBasis(newPWOA);
+            r = doPCA(newPWA);
+            
+            tableName = 'images';
+            colName = {'pcadata'};
+            data = {typecast(reshape(r,1,1024*1024),'int8')};
+            whereClause = ['WHERE imageID = ', num2str(imgid)];
+            update(conn,tableName,colName,data,whereClause);
+
+        else
+            blobdata=typecast(cell2mat(bdata),'double');
+            s=[1024 1024];
+            r=Blob2Matlab(blobdata,s);
+        end
+        
+    else % normal imaging
+        sqlquery2=['SELECT data, cameraID_fk FROM images WHERE imageID = ', num2str(imgid)];
+        curs2=exec(conn, sqlquery2);
+        curs2=fetch(curs2);
+        bdata=curs2.Data;
+        close(curs2);
+        blobdata=typecast(cell2mat(bdata(1)),'int16');
+        sqlquery3=['SELECT cameraHeight, cameraWidth, Depth FROM cameras WHERE cameraID = ', num2str(cell2mat(bdata(2)))];
+        curs3=exec(conn, sqlquery3);
+        curs3=fetch(curs3);
+        camdata=curs3.Data;
+        close(curs3);
+        camdata=cell2mat(camdata);
+        s=[camdata(1),camdata(2),camdata(3)];            
+        a=Blob2Matlab(blobdata,s);
+
+        r = data_evaluation(a, imgmode,framenum);
+    end
+
+    % rotate
     button_state = get(rotatebtn,'Value');
     if button_state == get(rotatebtn,'Max')
         r=imrotate(r, str2double(rotangle), 'bilinear', 'loose');          %Imrotate type and crop property can be defined here
     end
+end
+
+
+%% Gets the ROI as set by the cursors.
+function [roi] = get_roi(imgid,imgmode,framenum)
+    framedata=getImage(imgid,imgmode, framenum);
+    minx=round(min(xcurs));
+    maxx=round(max(xcurs));
+    miny=round(min(ycurs));
+    maxy=round(max(ycurs));
+    roi=framedata(miny:maxy,minx:maxx);           %Swapped x & y due to matlab notation
+
 end
 
 %% Call back function for load button for dblist. Can only load 1 imageID now
@@ -792,13 +915,7 @@ function update_but(~, ~)
     hdwmodesel=get(hdwmode, 'SelectedObject');
     imgmode=hdwmodesel.Value;
     imgid=cell2mat(currentimgid);
-    b=getImage(imgid,imgmode, framenum);
-    data=cast(b,'single');
-    minx=round(min(xcurs));
-    maxx=round(max(xcurs));
-    miny=round(min(ycurs));
-    maxy=round(max(ycurs));
-    data_roi=data(miny:maxy,minx:maxx);     %Change in x & y due to MATLAB notation, plot x in horizontal and y in transverse
+    data_roi = get_roi(imgid,imgmode,framenum);
    
     currentfolder = pwd;
     fitpath=[currentfolder '\FittingFunctions'];
@@ -846,12 +963,7 @@ function fit_click(~, ~)
     for i=1:length(temp_analysislist)
         if temp_analysislist{i} ~= 0 
             imgid=cell2mat(anaimgidlist(i));
-            framedata=getImage(imgid,imgmode, framenum);
-            minx=round(min(xcurs));
-            maxx=round(max(xcurs));
-            miny=round(min(ycurs));
-            maxy=round(max(ycurs));
-            data_roi=framedata(miny:maxy,minx:maxx);           %Swapped x & y due to matlab notation
+            data_roi = get_roi(imgid,imgmode,framenum);
             resy(i,:)=fitfunc(data_roi, eachplot);             %Input is absorption image, not Optical Density
         end
     end    
@@ -944,12 +1056,7 @@ function singlefit_click(~, ~)
     val= get(analysisdblist,'Value');
     [~]= get(analysisdblist,'String');
     imgid=cell2mat(anaimgidlist(val));
-    framedata=getImage(imgid,imgmode, framenum);
-    minx=round(min(xcurs));
-    maxx=round(max(xcurs));
-    miny=round(min(ycurs));
-    maxy=round(max(ycurs));
-    p=framedata(miny:maxy,minx:maxx);           %Swapped x & y due to matlab notation
+    p = get_roi(imgid,imgmode,framenum);
     resy=fitfunc(p, eachplot);
     
     output_num=int32(str2double(get(fitoutputnum, 'String')));
@@ -1163,6 +1270,13 @@ function globalShortcuts(source, eventdata)
     elseif strcmp(k,'insert')
         uicontrol(nextimgname);
     end
+end
+
+%% On close, save settings.
+function onClose(~, ~)
+    save('pwoaSave','pwoa');
+    save('oldestImgSave','oldestImgIndex');
+    delete(f);
 end
 
 end
