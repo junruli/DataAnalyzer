@@ -75,7 +75,7 @@ imgidlist=[];
 anaimgidlist=[];
 updateimgidlist();
 selecimgidlist=[];
-currentimgid=[];
+currentimgid=num2cell(max(cell2mat(imgidlist)));
 rotangle='0';
 
 
@@ -281,9 +281,10 @@ updatexvardropmenu();
 
 %% Initialize Analysis
 loadPCABasis();
+pcaflag = false;
 
 
-
+showimg(currentimgid);
 while true 
     if ~ishandle(dblist)
         break;
@@ -291,7 +292,9 @@ while true
     updateimgidlist();
     updatedblist();
     pause(0.5);
-%     showimg(currentimgid);
+    if ((get(pcashowbox,'Value')) && ~pcaflag)
+        showimg(currentimgid);
+    end
 end
 
 if ishandle(dblist)         %To make sure no new figure opens on closing GUI, need to define global lines to move them around
@@ -357,6 +360,7 @@ function updateimgidlist()
             anaimgidlist=[anaimgidlist; currentimgid];
             updateanalysisdblist();
         end
+        pcaflag = false;
     end
     close(curs1);
 end    
@@ -647,11 +651,15 @@ function [r] = getImage(imgid,imgmode,framenum)
         data = {typecast(reshape(r,1,1024*1024),'int8')};
         whereClause = ['WHERE imageID = ', num2str(imgid)];
         update(conn,tableName,colName,data,whereClause);
-
+        
+        pcaflag = true;
+        
     elseif ((get(pcacbox,'Value') || get(pcashowbox,'Value')) && framenum == 1 && ~strcmp('null',cell2mat(bdata)))
         blobdata=typecast(cell2mat(bdata),'double');
         s=[1024 1024];
         r=Blob2Matlab(blobdata,s);
+        
+        pcaflag = true;
     
     else
         % normal imaging
@@ -671,6 +679,7 @@ function [r] = getImage(imgid,imgmode,framenum)
         a=Blob2Matlab(blobdata,s);
 
         r = data_evaluation(a, imgmode,framenum);
+        
     end
 
     % rotate
