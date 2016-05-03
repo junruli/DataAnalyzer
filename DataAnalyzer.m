@@ -291,6 +291,7 @@ while true
     updateimgidlist();
     updatedblist();
     pause(0.5);
+    showimg(currentimgid);
 end
 
 if ishandle(dblist)         %To make sure no new figure opens on closing GUI, need to define global lines to move them around
@@ -1238,8 +1239,8 @@ end
 %% Show selected image in analysisdblist on img axes
 function showanalysisimgid_click(~, ~)
     val= get(analysisdblist,'Value');
-    imgid=anaimgidlist(val);
-    showimg(imgid);
+    currentimgid=anaimgidlist(val);
+    showimg(currentimgid);
 end
 
 %% Clears data saved from last fit (required when fit after changing cursor or angle)
