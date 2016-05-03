@@ -95,7 +95,7 @@ normmode = uicontrol('Parent', hdwmode, 'Style','radiobutton','String','Normal',
 kinmode = uicontrol('Parent', hdwmode, 'Style','radiobutton','String','Kinetics','Units', 'pixels','Position',[10,20,70,25]); %Kinetics mode of data acqui (2 frames)
 
 % PCA
-pcacbox = uicontrol('Style','checkbox','String','PCA new images','Position',[920,800,100,20],'Value',0,'Callback',@pca_click);
+pcacbox = uicontrol('Style','checkbox','String','Apply PCA','Position',[930,850,100,20],'Value',0,'Callback',@pca_click);
 
 % Tool box for img
 zon = uicontrol('Style','togglebutton','CData', zoom_icon,'Position',[855,650,25,25], 'Callback', @zoom_on); %Zoom On for Img
