@@ -96,6 +96,7 @@ kinmode = uicontrol('Parent', hdwmode, 'Style','radiobutton','String','Kinetics'
 
 % PCA
 pcacbox = uicontrol('Style','checkbox','String','Apply PCA','Position',[930,850,100,20],'Value',0,'Callback',@pca_click);
+pcashowbox = uicontrol('Style','checkbox','String','Show PCA','Position',[930,880,100,20],'Value',0,'Callback',@pca_click);
 
 % Tool box for img
 zon = uicontrol('Style','togglebutton','CData', zoom_icon,'Position',[855,650,25,25], 'Callback', @zoom_on); %Zoom On for Img
@@ -264,6 +265,7 @@ autoupbox.Units = 'normalized';
 addnext.Units = 'normalized';
 shownamecheck.Units = 'normalized';
 pcacbox.Units = 'normalized';
+pcashowbox.Units = 'normalized';
 
 
 %% Initialize the UI
@@ -604,53 +606,54 @@ end
 
 %% Gets the requested image from the database.
 function [r] = getImage(imgid,imgmode,framenum)
-    if (get(pcacbox,'Value') && framenum == 1) % PCA is checked and we want the absorption image
+    if ((get(pcacbox,'Value') || get(pcashowbox,'Value')) && framenum == 1) % PCA is checked and we want the absorption image
         sqlquery2=['SELECT pcadata FROM images WHERE imageID = ', num2str(imgid)];
         curs2=exec(conn, sqlquery2);
         curs2=fetch(curs2);
         bdata=curs2.Data;
+        close(curs2); 
+    end
+        
+    if (get(pcacbox,'Value') && framenum == 1 && strcmp('null',cell2mat(bdata))) % We haven't done PCA on this image yet.
+
+        sqlquery2=['SELECT data, cameraID_fk FROM images WHERE imageID = ', num2str(imgid)];
+        curs2=exec(conn, sqlquery2);
+        curs2=fetch(curs2);
+        bdata=curs2.Data;
         close(curs2);
-        
-        if strcmp('null',cell2mat(bdata)) % We haven't done PCA on this image yet.
-            
-            sqlquery2=['SELECT data, cameraID_fk FROM images WHERE imageID = ', num2str(imgid)];
-            curs2=exec(conn, sqlquery2);
-            curs2=fetch(curs2);
-            bdata=curs2.Data;
-            close(curs2);
-            blobdata=typecast(cell2mat(bdata(1)),'int16');
-            sqlquery3=['SELECT cameraHeight, cameraWidth, Depth FROM cameras WHERE cameraID = ', num2str(cell2mat(bdata(2)))];
-            curs3=exec(conn, sqlquery3);
-            curs3=fetch(curs3);
-            camdata=curs3.Data;
-            close(curs3);
-            camdata=cell2mat(camdata);
-            s=[camdata(1),camdata(2),camdata(3)];            
-            a=Blob2Matlab(blobdata,s);
+        blobdata=typecast(cell2mat(bdata(1)),'int16');
+        sqlquery3=['SELECT cameraHeight, cameraWidth, Depth FROM cameras WHERE cameraID = ', num2str(cell2mat(bdata(2)))];
+        curs3=exec(conn, sqlquery3);
+        curs3=fetch(curs3);
+        camdata=curs3.Data;
+        close(curs3);
+        camdata=cell2mat(camdata);
+        s=[camdata(1),camdata(2),camdata(3)];            
+        a=Blob2Matlab(blobdata,s);
 
-            newPWOA = data_evaluation(a, 1, 3);
-            newPWA = data_evaluation(a, 1, 2);
-            newDark = data_evaluation(a, 1, 4);
-            
-            newPWA = double(max(min(newPWA - newDark,65535),1));
-            newPWOA = double(max(min(newPWOA - newDark,65535),1));
-            
-            addToBasis(newPWOA);
-            r = doPCA(newPWA);
-            
-            tableName = 'images';
-            colName = {'pcadata'};
-            data = {typecast(reshape(r,1,1024*1024),'int8')};
-            whereClause = ['WHERE imageID = ', num2str(imgid)];
-            update(conn,tableName,colName,data,whereClause);
+        newPWOA = data_evaluation(a, 1, 3);
+        newPWA = data_evaluation(a, 1, 2);
+        newDark = data_evaluation(a, 1, 4);
 
-        else
-            blobdata=typecast(cell2mat(bdata),'double');
-            s=[1024 1024];
-            r=Blob2Matlab(blobdata,s);
-        end
-        
-    else % normal imaging
+        newPWA = double(max(min(newPWA - newDark,65535),1));
+        newPWOA = double(max(min(newPWOA - newDark,65535),1));
+
+        addToBasis(newPWOA);
+        r = doPCA(newPWA);
+
+        tableName = 'images';
+        colName = {'pcadata'};
+        data = {typecast(reshape(r,1,1024*1024),'int8')};
+        whereClause = ['WHERE imageID = ', num2str(imgid)];
+        update(conn,tableName,colName,data,whereClause);
+
+    elseif ((get(pcacbox,'Value') || get(pcashowbox,'Value')) && framenum == 1 && ~strcmp('null',cell2mat(bdata)))
+        blobdata=typecast(cell2mat(bdata),'double');
+        s=[1024 1024];
+        r=Blob2Matlab(blobdata,s);
+    
+    else
+        % normal imaging
         sqlquery2=['SELECT data, cameraID_fk FROM images WHERE imageID = ', num2str(imgid)];
         curs2=exec(conn, sqlquery2);
         curs2=fetch(curs2);
@@ -1274,8 +1277,10 @@ end
 
 %% On close, save settings.
 function onClose(~, ~)
-    save('pwoaSave','pwoa');
-    save('oldestImgSave','oldestImgIndex');
+    if get(pcacbox,'Value') % PCA is checked
+        save('pwoaSave','pwoa');
+        save('oldestImgSave','oldestImgIndex');
+    end
     delete(f);
 end
 
