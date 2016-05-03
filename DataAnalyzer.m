@@ -677,6 +677,17 @@ function [r] = getImage(imgid,imgmode,framenum)
 end
 
 
+%% Gets the ROI as set by the cursors.
+function [roi] = get_roi(imgid,imgmode,framenum)
+    framedata=getImage(imgid,imgmode, framenum);
+    minx=round(min(xcurs));
+    maxx=round(max(xcurs));
+    miny=round(min(ycurs));
+    maxy=round(max(ycurs));
+    roi=framedata(miny:maxy,minx:maxx);           %Swapped x & y due to matlab notation
+
+end
+
 %% Call back function for load button for dblist. Can only load 1 imageID now
 function load_click(~, ~)
     newid=inputdlg('Enter Image ID:', 'Load');
@@ -904,13 +915,7 @@ function update_but(~, ~)
     hdwmodesel=get(hdwmode, 'SelectedObject');
     imgmode=hdwmodesel.Value;
     imgid=cell2mat(currentimgid);
-    b=getImage(imgid,imgmode, framenum);
-    data=cast(b,'single');
-    minx=round(min(xcurs));
-    maxx=round(max(xcurs));
-    miny=round(min(ycurs));
-    maxy=round(max(ycurs));
-    data_roi=data(miny:maxy,minx:maxx);     %Change in x & y due to MATLAB notation, plot x in horizontal and y in transverse
+    data_roi = get_roi(imgid,imgmode,framenum);
    
     currentfolder = pwd;
     fitpath=[currentfolder '\FittingFunctions'];
@@ -958,12 +963,7 @@ function fit_click(~, ~)
     for i=1:length(temp_analysislist)
         if temp_analysislist{i} ~= 0 
             imgid=cell2mat(anaimgidlist(i));
-            framedata=getImage(imgid,imgmode, framenum);
-            minx=round(min(xcurs));
-            maxx=round(max(xcurs));
-            miny=round(min(ycurs));
-            maxy=round(max(ycurs));
-            data_roi=framedata(miny:maxy,minx:maxx);           %Swapped x & y due to matlab notation
+            data_roi = get_roi(imgid,imgmode,framenum);
             resy(i,:)=fitfunc(data_roi, eachplot);             %Input is absorption image, not Optical Density
         end
     end    
@@ -1056,12 +1056,7 @@ function singlefit_click(~, ~)
     val= get(analysisdblist,'Value');
     [~]= get(analysisdblist,'String');
     imgid=cell2mat(anaimgidlist(val));
-    framedata=getImage(imgid,imgmode, framenum);
-    minx=round(min(xcurs));
-    maxx=round(max(xcurs));
-    miny=round(min(ycurs));
-    maxy=round(max(ycurs));
-    p=framedata(miny:maxy,minx:maxx);           %Swapped x & y due to matlab notation
+    p = get_roi(imgid,imgmode,framenum);
     resy=fitfunc(p, eachplot);
     
     output_num=int32(str2double(get(fitoutputnum, 'String')));
