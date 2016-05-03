@@ -291,7 +291,7 @@ while true
     updateimgidlist();
     updatedblist();
     pause(0.5);
-    showimg(currentimgid);
+%     showimg(currentimgid);
 end
 
 if ishandle(dblist)         %To make sure no new figure opens on closing GUI, need to define global lines to move them around
