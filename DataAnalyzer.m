@@ -556,41 +556,8 @@ function showimg(filenum)
     hdwmodesel=get(hdwmode, 'SelectedObject');
     framenum=get(framelist, 'Value');
     imgmode=hdwmodesel.Value;
-    
-    if get(pcacbox,'Value') % PCA is checked
-        sqlquery2=['SELECT pcadata FROM images WHERE imageID = ', num2str(imgid)];
-        curs2=exec(conn, sqlquery2);
-        curs2=fetch(curs2);
-        bdata=curs2.Data;
-        close(curs2);
         
-        if strcmp('null',cell2mat(bdata)) % We haven't done PCA on this image yet.
-            newPWOA = getImage(imgid,1,3);
-            newPWA = getImage(imgid,1,2);
-            newDark = getImage(imgid,1,4);
-            
-            newPWA = double(max(min(newPWA - newDark,65535),1));
-            newPWOA = double(max(min(newPWOA - newDark,65535),1));
-            
-            addToBasis(newPWOA);
-            r = doPCA(newPWA);
-            
-            tableName = 'images';
-            colName = {'pcadata'};
-            data = {typecast(reshape(r,1,1024*1024),'int8')};
-            whereClause = ['WHERE imageID = ', num2str(imgid)];
-            update(conn,tableName,colName,data,whereClause);
-
-        else
-            blobdata=typecast(cell2mat(bdata),'double');
-            s=[1024 1024];
-            r=Blob2Matlab(blobdata,s);
-        end
-        
-    else
-        r = getImage(imgid,imgmode,framenum);
-    end
-    
+    r = getImage(imgid,imgmode,framenum);
     cla(img);
     [~]= imagesc(r, 'Parent', img);
     if get(colormapname,'Value') == 1
@@ -637,32 +604,78 @@ end
 
 %% Gets the requested image from the database.
 function [r] = getImage(imgid,imgmode,framenum)
-    sqlquery2=['SELECT data, cameraID_fk FROM images WHERE imageID = ', num2str(imgid)];
-    curs2=exec(conn, sqlquery2);
-    curs2=fetch(curs2);
-    bdata=curs2.Data;
-    close(curs2);
-    blobdata=typecast(cell2mat(bdata(1)),'int16');
-    sqlquery3=['SELECT cameraHeight, cameraWidth, Depth FROM cameras WHERE cameraID = ', num2str(cell2mat(bdata(2)))];
-    curs3=exec(conn, sqlquery3);
-    curs3=fetch(curs3);
-    camdata=curs3.Data;
-    close(curs3);
-    camdata=cell2mat(camdata);
-    s=[camdata(1),camdata(2),camdata(3)];            
-    a=Blob2Matlab(blobdata,s);
-    
-    r=data_det(a,imgmode, framenum);
-end
+    if (get(pcacbox,'Value') && framenum == 1) % PCA is checked and we want the absorption image
+        sqlquery2=['SELECT pcadata FROM images WHERE imageID = ', num2str(imgid)];
+        curs2=exec(conn, sqlquery2);
+        curs2=fetch(curs2);
+        bdata=curs2.Data;
+        close(curs2);
+        
+        if strcmp('null',cell2mat(bdata)) % We haven't done PCA on this image yet.
+            
+            sqlquery2=['SELECT data, cameraID_fk FROM images WHERE imageID = ', num2str(imgid)];
+            curs2=exec(conn, sqlquery2);
+            curs2=fetch(curs2);
+            bdata=curs2.Data;
+            close(curs2);
+            blobdata=typecast(cell2mat(bdata(1)),'int16');
+            sqlquery3=['SELECT cameraHeight, cameraWidth, Depth FROM cameras WHERE cameraID = ', num2str(cell2mat(bdata(2)))];
+            curs3=exec(conn, sqlquery3);
+            curs3=fetch(curs3);
+            camdata=curs3.Data;
+            close(curs3);
+            camdata=cell2mat(camdata);
+            s=[camdata(1),camdata(2),camdata(3)];            
+            a=Blob2Matlab(blobdata,s);
 
-%% To determine which kind of file it is and process it
-function [r] = data_det(a, imgmode, framenum)
-    r = data_evaluation(a, imgmode,framenum);
+            newPWOA = data_evaluation(a, 1, 3);
+            newPWA = data_evaluation(a, 1, 2);
+            newDark = data_evaluation(a, 1, 4);
+            
+            newPWA = double(max(min(newPWA - newDark,65535),1));
+            newPWOA = double(max(min(newPWOA - newDark,65535),1));
+            
+            addToBasis(newPWOA);
+            r = doPCA(newPWA);
+            
+            tableName = 'images';
+            colName = {'pcadata'};
+            data = {typecast(reshape(r,1,1024*1024),'int8')};
+            whereClause = ['WHERE imageID = ', num2str(imgid)];
+            update(conn,tableName,colName,data,whereClause);
+
+        else
+            blobdata=typecast(cell2mat(bdata),'double');
+            s=[1024 1024];
+            r=Blob2Matlab(blobdata,s);
+        end
+        
+    else % normal imaging
+        sqlquery2=['SELECT data, cameraID_fk FROM images WHERE imageID = ', num2str(imgid)];
+        curs2=exec(conn, sqlquery2);
+        curs2=fetch(curs2);
+        bdata=curs2.Data;
+        close(curs2);
+        blobdata=typecast(cell2mat(bdata(1)),'int16');
+        sqlquery3=['SELECT cameraHeight, cameraWidth, Depth FROM cameras WHERE cameraID = ', num2str(cell2mat(bdata(2)))];
+        curs3=exec(conn, sqlquery3);
+        curs3=fetch(curs3);
+        camdata=curs3.Data;
+        close(curs3);
+        camdata=cell2mat(camdata);
+        s=[camdata(1),camdata(2),camdata(3)];            
+        a=Blob2Matlab(blobdata,s);
+
+        r = data_evaluation(a, imgmode,framenum);
+    end
+
+    % rotate
     button_state = get(rotatebtn,'Value');
     if button_state == get(rotatebtn,'Max')
         r=imrotate(r, str2double(rotangle), 'bilinear', 'loose');          %Imrotate type and crop property can be defined here
     end
 end
+
 
 %% Call back function for load button for dblist. Can only load 1 imageID now
 function load_click(~, ~)
