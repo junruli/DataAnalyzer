@@ -582,11 +582,6 @@ function showimg(filenum)
             update(conn,tableName,colName,data,whereClause);
 
         else
-            sqlquery2=['SELECT pcadata FROM images WHERE imageID = ', num2str(imgid)];
-            curs2=exec(conn, sqlquery2);
-            curs2=fetch(curs2);
-            bdata=curs2.Data;
-            close(curs2);
             blobdata=typecast(cell2mat(bdata),'double');
             s=[1024 1024];
             r=Blob2Matlab(blobdata,s);
