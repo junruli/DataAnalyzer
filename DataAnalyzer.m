@@ -930,13 +930,19 @@ function update_but(~, ~)
     imgid=cell2mat(currentimgid);
     data_roi = get_roi(imgid,imgmode,framenum);
    
-    currentfolder = pwd;
-    fitpath=[currentfolder '\FittingFunctions'];
-    addpath(fitpath);
-    norm_n = NormN_Count(data_roi,0);
-    xGauss = Gauss_Fit(data_roi,0);
-    yGauss = Gauss_Fit(data_roi',0);
-    
+    try
+        currentfolder = pwd;
+        fitpath=[currentfolder '\FittingFunctions'];
+        addpath(fitpath);
+        norm_n = NormN_Count(data_roi,0);
+        xGauss = Gauss_Fit(data_roi,0);
+        yGauss = Gauss_Fit(data_roi',0);
+    catch
+        warning('Error with fitting.');
+        norm_n = 0;
+        xGauss = [0,0,0];
+        yGauss = [0,0,0];
+    end
     set(quickres, 'String', {['Norm N Count: ' num2str(norm_n)]; ['X Width: ' num2str(2^(3/2) * xGauss(3))]; ['Y Width: ' num2str(2^(3/2) * yGauss(3))]; ['X Center: ' num2str(xGauss(2))]; ['Y Center: ' num2str(yGauss(2))]; ['X Curs: ' num2str(round(min(xcurs))) ' , ' num2str(round(max(xcurs)))];['Y Curs: ' num2str(round(min(ycurs))) ' , ' num2str(round(max(ycurs)))];});
 end
 
