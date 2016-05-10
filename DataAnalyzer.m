@@ -292,7 +292,7 @@ while true
     updateimgidlist();
     updatedblist();
     pause(0.5);
-    if ((get(pcashowbox,'Value')) && ~pcaflag)
+    if (isvalid(pcashowbox) && get(pcashowbox,'Value') && ~pcaflag)
         showimg(currentimgid);
     end
 end
