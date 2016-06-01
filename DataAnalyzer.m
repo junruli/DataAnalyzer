@@ -557,13 +557,26 @@ function colormapname_click (~, ~)
     showimg(currentimgid);
 end
 
+%% Gets the image mode requested. 1 = normal, 2 = kinetics with two frames, 3 = kinetics all on one frame.
+function imgmodeout = getImgMode()
+    hdwmodesel=get(hdwmode, 'SelectedObject');
+    switch hdwmodesel
+        case normmode
+            imgmodeout = 1;
+        case kinmode
+            imgmodeout = 2;
+        otherwise
+            imgmodeout = 1;
+            warning('Imaging mode undefined.');
+    end
+end
+
 %% For updating image in 'img', inserted one input parameter as it has to be globally defined
 function showimg(filenum)
     imgid=cell2mat(filenum(1));
-    hdwmodesel=get(hdwmode, 'SelectedObject');
     framenum=get(framelist, 'Value');
-    imgmode=hdwmodesel.Value;
-        
+    imgmode = getImgMode();
+    
     r = getImage(imgid,imgmode,framenum);
     cla(img);
     [~]= imagesc(r, 'Parent', img);
@@ -925,8 +938,7 @@ end
 %% Callback function for update button for quick results
 function update_but(~, ~)
     framenum=get(framelist, 'Value');
-    hdwmodesel=get(hdwmode, 'SelectedObject');
-    imgmode=hdwmodesel.Value;
+    imgmode = getImgMode();
     imgid=cell2mat(currentimgid);
     data_roi = get_roi(imgid,imgmode,framenum);
    
@@ -957,8 +969,7 @@ function fit_click(~, ~)
     fitfunc=str2func(fitfuncname.name(1:end-2));
 
     framenum=get(framelist, 'Value');
-    hdwmodesel=get(hdwmode, 'SelectedObject');
-    imgmode=hdwmodesel.Value;
+    imgmode = getImgMode();
     if get(fitplotcheck, 'Value') == get(fitplotcheck, 'Max')   %Checks whether to plot sub-figure for each fit
         eachplot = 1;
     else
@@ -1069,8 +1080,7 @@ function singlefit_click(~, ~)
     fitfunc=str2func(fitfuncname.name(1:end-2));
 
     framenum=get(framelist, 'Value');
-    hdwmodesel=get(hdwmode, 'SelectedObject');
-    imgmode=hdwmodesel.Value;
+    imgmode = getImgMode();
     eachplot = 1;
     val= get(analysisdblist,'Value');
     [~]= get(analysisdblist,'String');
