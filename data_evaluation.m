@@ -1,16 +1,33 @@
 function [r] = data_evaluation(a, imgmode, framenum)
 if imgmode == 1
     a_1=a(:,:,1); %PWA
-    a_2=a(:,:,2); %PWOA
-    a_3=a(:,:,3); %DF
+    if size(a,3) < 2
+        a_2 = 1;
+        warning('Not enough frames.');
+    else
+        a_2=a(:,:,2); %PWOA
+    end
+    if size(a,3) < 3
+        a_3 = 0;
+        warning('Not enough frames.');
+    else
+        a_3=a(:,:,3); %DF
+    end
     a_4 = a_3;    
 elseif imgmode == 2
-    a_1=a(1:length(a)/2,:,1); %PWA
-    a_2=a(length(a)/2+1:length(a),:,1); %PWOA
-    a_3=a(1:length(a)/2,:,2); %DF
-    a_4=a(length(a)/2+1:length(a),:,2); %DF for PWOA
+    framesize = floor(size(a,2)/2);
+    a_1=a(1:framesize,:,1); %PWA
+    a_2=a(framesize:2*framesize,:,1); %PWOA
+    if size(a,3) < 2
+        a_3 = 0;
+        a_4 = 0;
+        warning('Not enough frames.');
+    else
+        a_3=a(1:framesize,:,2); %DF
+        a_4=a(framesize+1:2*framesize,:,2); %DF for PWOA
+    end
 elseif imgmode == 3
-    framesize = floor(length(a)/3);
+    framesize = floor(size(a,2)/3);
     a_1=a(1:framesize,:,1); %PWA
     a_2=a(framesize+1:2*framesize,:,1); %PWOA
     a_3=a(2*framesize+1:3*framesize,:,1); %DF
