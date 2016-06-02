@@ -17,7 +17,7 @@ if imgmode == 1
 elseif imgmode == 2
     framesize = floor(size(a,2)/2);
     a_1=a(1:framesize,:,1); %PWA
-    a_2=a(framesize:2*framesize,:,1); %PWOA
+    a_2=a(framesize+1:2*framesize,:,1); %PWOA
     if size(a,3) < 2
         a_3 = 0;
         a_4 = 0;
@@ -38,7 +38,7 @@ a_1 = min(a_1,65535);
 a_2 = min(a_2,65535);
 a_3 = min(a_3,65535);
 a_up=a_1-a_3;
-a_down=a_2-a_3;
+a_down=a_2-a_4;
 
 a_up = min(a_up,65535);
 a_down = min(a_down,65535);
