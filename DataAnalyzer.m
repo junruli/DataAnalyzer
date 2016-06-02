@@ -90,9 +90,8 @@ autoupbox = uicontrol('Style','checkbox','String','Auto Update','Position',[895,
 
 % Mode of image in img
 framelist = uicontrol('Style','listbox', 'min' , 0, 'max' , 1, 'Position', [820, 690, 150,100], 'String', {'Absorption Image','Probe with Atoms','Probe without Atoms','Dark Field','Dark Field (Dual DF)'}, 'Callback', @framelist_click); %List of frames
-hdwmode = uibuttongroup('Title','Imaging Mode','Units', 'pixels', 'Position',[820, 810, 100,100], 'SelectionChangedFcn', @hdwmode_change); 
-normmode = uicontrol('Parent', hdwmode, 'Style','radiobutton','String','Normal','Units', 'pixels','Position',[10,55,70,25]); %Normal mode of data acqui (3 frames)
-kinmode = uicontrol('Parent', hdwmode, 'Style','radiobutton','String','Kinetics','Units', 'pixels','Position',[10,20,70,25]); %Kinetics mode of data acqui (2 frames)
+imgModeText = uicontrol('Style','text','String','Imaging Mode:','Position',[820 870 100 25]);
+imgMode = uicontrol('Style','popupmenu','String',{'Normal','Kinetics 2','Kinetics 3'},'Position',[820 840 100 30],'Callback',@hdwmode_change);
 
 % PCA
 pcacbox = uicontrol('Style','checkbox','String','Apply PCA','Position',[930,850,100,20],'Value',0,'Callback',@pca_click);
@@ -194,9 +193,6 @@ img.Units = 'normalized';
 updatebut.Units = 'normalized';
 quickres.Units = 'normalized';
 framelist.Units = 'normalized';
-hdwmode.Units = 'normalized';
-normmode.Units = 'normalized';
-kinmode.Units = 'normalized';
 zon.Units = 'normalized';
 zreset.Units = 'normalized';
 curs.Units = 'normalized';
@@ -266,6 +262,8 @@ addnext.Units = 'normalized';
 shownamecheck.Units = 'normalized';
 pcacbox.Units = 'normalized';
 pcashowbox.Units = 'normalized';
+imgModeText.Units = 'normalized';
+imgMode.Units = 'normalized';
 
 
 %% Initialize the UI
@@ -557,13 +555,17 @@ function colormapname_click (~, ~)
     showimg(currentimgid);
 end
 
+%% Gets the image mode requested. 1 = normal, 2 = kinetics with two frames, 3 = kinetics all on one frame.
+function imgmodeout = getImgMode()
+    imgmodeout = imgMode.Value;
+end
+
 %% For updating image in 'img', inserted one input parameter as it has to be globally defined
 function showimg(filenum)
     imgid=cell2mat(filenum(1));
-    hdwmodesel=get(hdwmode, 'SelectedObject');
     framenum=get(framelist, 'Value');
-    imgmode=hdwmodesel.Value;
-        
+    imgmode = getImgMode();
+    
     r = getImage(imgid,imgmode,framenum);
     cla(img);
     [~]= imagesc(r, 'Parent', img);
@@ -925,8 +927,7 @@ end
 %% Callback function for update button for quick results
 function update_but(~, ~)
     framenum=get(framelist, 'Value');
-    hdwmodesel=get(hdwmode, 'SelectedObject');
-    imgmode=hdwmodesel.Value;
+    imgmode = getImgMode();
     imgid=cell2mat(currentimgid);
     data_roi = get_roi(imgid,imgmode,framenum);
    
@@ -957,8 +958,7 @@ function fit_click(~, ~)
     fitfunc=str2func(fitfuncname.name(1:end-2));
 
     framenum=get(framelist, 'Value');
-    hdwmodesel=get(hdwmode, 'SelectedObject');
-    imgmode=hdwmodesel.Value;
+    imgmode = getImgMode();
     if get(fitplotcheck, 'Value') == get(fitplotcheck, 'Max')   %Checks whether to plot sub-figure for each fit
         eachplot = 1;
     else
@@ -1069,8 +1069,7 @@ function singlefit_click(~, ~)
     fitfunc=str2func(fitfuncname.name(1:end-2));
 
     framenum=get(framelist, 'Value');
-    hdwmodesel=get(hdwmode, 'SelectedObject');
-    imgmode=hdwmodesel.Value;
+    imgmode = getImgMode();
     eachplot = 1;
     val= get(analysisdblist,'Value');
     [~]= get(analysisdblist,'String');
