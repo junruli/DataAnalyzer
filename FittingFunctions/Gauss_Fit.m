@@ -1,4 +1,5 @@
 function [ fitParams ] = Gauss_Fit( a, eachplot )
+%
 % fitParams(1) = amplitude
 % fitParams(2) = center
 % fitParams(3) = sigma
