@@ -64,6 +64,11 @@ row=1024;
 xcurs=[1 col];
 ycurs=[1 row];
 xvar='1';
+numImages = 500; % the number of images viewable in the data analyzer
+pcaBasisSize = 50;
+pwoa = zeros(pcaBasisSize,col*row); % Reshaped probe without atom images to form a basis for pca.
+eigenBasis = 0; % Eigenbasis found with PCA.
+oldestImgIndex = 1; % Points to the oldest image in pwoaList, which should be replaced first.
 conn = database('becivdatabase', 'root', 'w0lfg4ng', 'Server', '18.62.27.10', 'Vendor', 'MySQL'); %Specify name of database here
 imgidlist=[];
 anaimgidlist=[];
@@ -71,13 +76,6 @@ updateimgidlist();
 selecimgidlist=[];
 currentimgid=num2cell(max(cell2mat(imgidlist)));
 rotangle='0';
-
-numImages = 500; % the number of images viewable in the data analyzer
-pcaBasisSize = 50;
-pwoa = zeros(pcaBasisSize,col*row); % Reshaped probe without atom images to form a basis for pca.
-eigenBasis = 0; % Eigenbasis found with PCA.
-oldestImgIndex = 1; % Points to the oldest image in pwoaList, which should be replaced first.
-
 
 %% Define components of UI
 img = axes('Units','pixels','Position',[50,330,750,600]);  %Main image from database
@@ -87,7 +85,6 @@ updatebut = uicontrol('Style','pushbutton','String','Update [F5]','Position',[82
 quickres = uicontrol('Style','edit','String','Quick Results','min', 0, 'max', 100, 'Position',[820,380,150,150]); %Quick results for img
 autoupbox = uicontrol('Style','checkbox','String','Auto Update','Position',[895,552,120,20], 'Value', 0); %Update the quick results after changing the image.
 
-
 % Mode of image in img
 framelist = uicontrol('Style','listbox', 'min' , 0, 'max' , 1, 'Position', [820, 690, 150,100], 'String', {'Absorption Image','Probe with Atoms','Probe without Atoms','Dark Field','Dark Field (Dual DF)'}, 'Callback', @framelist_click); %List of frames
 imgModeText = uicontrol('Style','text','String','Imaging Mode:','Position',[820 870 100 25]);
@@ -96,7 +93,7 @@ imgMode = uicontrol('Style','popupmenu','String',{'Normal','Kinetics 2','Kinetic
 % PCA
 pcacbox = uicontrol('Style','checkbox','String','Apply PCA','Position',[930,850,100,20],'Value',0,'Callback',@pca_click);
 pcashowbox = uicontrol('Style','checkbox','String','Show PCA','Position',[930,880,100,20],'Value',0,'Callback',@pca_click);
-pcaTest = uicontrol('Style','checkbox','String','PCA Test','Position',[930,900,100,20],'Value',0,'Callback',@pca_click);
+pcaTest = uicontrol('Style','checkbox','String','PCA Test','Position',[930,910,100,20],'Value',0,'Callback',@pca_click);
 
 % Tool box for img
 zon = uicontrol('Style','togglebutton','CData', zoom_icon,'Position',[855,650,25,25], 'Callback', @zoom_on); %Zoom On for Img
@@ -595,19 +592,29 @@ end
 %% Performs PCA on the selected PWA image using the global eigenBasis.
 function [imgOut] = doPCA(imgIn)
     
-    toImg = reshape(imgIn,col*row,1);
+    toImg = reshape(imgIn,size(imgIn,1)*size(imgIn,2),1);
+    if length(toImg) < col*row
+        toImg(col*row,1) = 0; % add padding
+    end
+    
     meanImg = mean(pwoa,1)';
 
     c = (toImg-meanImg)'*eigenBasis;
     estPWOA = (eigenBasis*c'+meanImg);
         
-    imgOut = reshape(toImg./estPWOA,col,row);
+    toImg = toImg(1:size(imgIn,1)*size(imgIn,2));
+    estPWOA = estPWOA(1:size(imgIn,1)*size(imgIn,2));
+    
+    imgOut = reshape(toImg./estPWOA,size(imgIn,1),size(imgIn,2));
 
 end
 
 %% Adds a new col*row image to the PCA basis and updates the eigenbasis.
 function addToBasis(newImg)
-    X = reshape(newImg,1,col*row);
+    X = reshape(newImg,1,size(newImg,1)*size(newImg,2));
+    if length(X) < col*row
+        X(1,col*row) = 0;
+    end
     pwoa(oldestImgIndex,:) = X;
     oldestImgIndex = mod(oldestImgIndex, pcaBasisSize) + 1;
     eigenBasis = makeEigenBasis(pwoa);
@@ -643,9 +650,9 @@ function [r] = getImage(imgid,imgmode,framenum)
         s=[camdata(1),camdata(2),camdata(3)];            
         a=Blob2Matlab(blobdata,s);
 
-        newPWOA = data_evaluation(a, 1, 3);
-        newPWA = data_evaluation(a, 1, 2);
-        newDark = data_evaluation(a, 1, 4);
+        newPWOA = data_evaluation(a, imgmode, 3);
+        newPWA = data_evaluation(a, imgmode, 2);
+        newDark = data_evaluation(a, imgmode, 4);
 
         newPWA = double(max(min(newPWA - newDark,65535),1));
         newPWOA = double(max(min(newPWOA - newDark,65535),1));
