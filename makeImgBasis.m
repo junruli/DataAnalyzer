@@ -2,7 +2,7 @@ function [ ] = makeImgBasis( imageIDSpace )
 %UNTITLED Summary of this function goes here
 %   Detailed explanation goes here
 
-conn = database('becivdatabase', 'root', 'w0lfg4ng', 'Server', '18.62.27.134', 'Vendor', 'MySQL');
+conn = database('becivdatabase', 'root', 'w0lfg4ng', 'Server', '18.62.27.10', 'Vendor', 'MySQL');
 
 dataOut = zeros(length(imageIDSpace),1024,1024,3);
 batchSize = 10;
