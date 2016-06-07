@@ -13,8 +13,8 @@ fitresult details:
 
     OD=-log(a);
     roi=[0, 0, size(OD,1), size(OD,2)];
-    xRegion = round(roi(1))+(1:round(roi(3)));
-    yRegion = round(roi(2))+(1:round(roi(4)));
+    xRegion = round(roi(1))+(1:round(roi(4)));
+    yRegion = round(roi(2))+(1:round(roi(3)));
     X = reshape(repmat(xRegion',1,numel(yRegion))',1,[]);    
     Y = repmat(yRegion,1,numel(xRegion));
     Z = reshape(OD,1,[]);
@@ -67,6 +67,30 @@ fitresult details:
     opts.Display = 'Off';
     
     % Fit model to data.
-    [result, gof] = fit( [xData, yData], zData, ft, opts );
+    [result, ~] = fit( [xData, yData], zData, ft, opts );
     fitresult=coeffvalues(result);
+    
+    %Image plotting the fitting results versus the raw image for debugging purposes
+    if eachplot
+        residual = result(xData,yData)-zData;
+        xFitP = sum(reshape(result(xData,yData),size(OD)),1);
+        yFitP = sum(reshape(result(xData,yData),size(OD)),2);
+        xThermP = sum(reshape(fitresult(2)*(1-fitresult(1))/(2*pi*fitresult(5)*fitresult(6))/1.202*gbec(2,exp(-((X-fitresult(7)).^2./fitresult(5)^2+(Y-fitresult(8)).^2./fitresult(6)^2)/2),3),size(OD)),1);
+        yThermP = sum(reshape(fitresult(2)*(1-fitresult(1))/(2*pi*fitresult(5)*fitresult(6))/1.202*gbec(2,exp(-((X-fitresult(7)).^2./fitresult(5)^2+(Y-fitresult(8)).^2./fitresult(6)^2)/2),3),size(OD)),2);
+        squareres = reshape(residual,[size(OD,1),size(OD,2)]);
+        figure;
+        subplot(4,4,[1 2 3 5 6 7 9 10 11]);
+        imagesc(squareres);
+        axis off;
+        subplot(4,4,[13 14 15]);
+        xfig = plot(xRegion,xProjection,'.',xRegion,xFitP,'-',xRegion,xThermP,'-');
+        title('x Projection');
+        axis tight;
+        subplot(4,4,[4 8 12]);
+        yfig = plot(yRegion,yProjection,'.',yRegion,yFitP,'-',yRegion,yThermP,'-');
+        rotate(yfig,[0,0,1],-90);
+        title('y Projection');
+        axis tight;
+    end
+        
 end
