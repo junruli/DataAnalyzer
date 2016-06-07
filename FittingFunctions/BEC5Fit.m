@@ -83,11 +83,12 @@ fitresult details:
         imagesc(squareres);
         axis off;
         subplot(4,4,[13 14 15]);
-        plot(xRegion,xProjection,'.',xRegion,xFitP,'-',xRegion,xThermP,'-');
+        xfig = plot(xRegion,xProjection,'.',xRegion,xFitP,'-',xRegion,xThermP,'-');
         title('x Projection');
         axis tight;
         subplot(4,4,[4 8 12]);
-        plot(yProjection,yRegion,'.',yFitP,yRegion,'-',yThermP,yRegion,'-');
+        yfig = plot(yRegion,yProjection,'.',yRegion,yFitP,'-',yRegion,yThermP,'-');
+        rotate(yfig,[0,0,1],-90);
         title('y Projection');
         axis tight;
     end
